@@ -166,7 +166,7 @@ export default function HomePage() {
     setTimeout(() => goToNextPaper(), 600);
   }, [addLikedPaper, goToNextPaper]);
 
-  const handleDislike = useCallback(() => { // ★★★ _paperId 引数を削除 ★★★
+  const handleDislike = useCallback(() => {
     setInteractionState(prev => ({ ...prev, isSwiping: false, flyingDirection: 'left', feedbackColor: styles.feedbackLimeDislike || '', cardTransform: '' }));
     setTimeout(() => goToNextPaper(), 600);
   }, [goToNextPaper]);
@@ -174,7 +174,7 @@ export default function HomePage() {
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => { if (!e.touches[0] || interactionState.flyingDirection) return; setInteractionState(prev => ({ ...prev, isSwiping: true, cardTransform: '', feedbackColor: '' })); touchStartX.current = e.touches[0].clientX; touchCurrentX.current = e.touches[0].clientX; touchStartY.current = e.touches[0].clientY; };
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => { if (touchStartX.current === null || !e.touches[0] || touchStartY.current === null || !topCardRef.current || interactionState.flyingDirection || !interactionState.isSwiping) return; const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; touchCurrentX.current = currentX; const diffX = currentX - touchStartX.current; const diffY = Math.abs(currentY - touchStartY.current); if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) { if(interactionState.isSwiping) resetCardInteraction(); return; } const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION_PAGE; const translateX = diffX * SWIPE_TRANSLATE_X_SCALE_PAGE; setInteractionState(prev => ({ ...prev, cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`, feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD_PAGE / 2 ? (diffX > 0 ? (styles.feedbackPinkLike || '') : (styles.feedbackLimeDislike || '')) : '' })); };
-  const handleTouchEnd = () => { if (!interactionState.isSwiping && !interactionState.flyingDirection) return; if (interactionState.flyingDirection) return; if (touchStartX.current === null || touchCurrentX.current === null ) { resetCardInteraction(); return; } const diffX = touchCurrentX.current - touchStartX.current; const currentPaper = papers[currentPaperIndex]; if (!currentPaper) { resetCardInteraction(); return; } if (Math.abs(diffX) > SWIPE_THRESHOLD_PAGE) { if (diffX > 0) { handleLike(currentPaper); } else { handleDislike(); } } else { resetCardInteraction(); } }; // ★★★ handleDislike呼び出し変更 ★★★
+  const handleTouchEnd = () => { if (!interactionState.isSwiping && !interactionState.flyingDirection) return; if (interactionState.flyingDirection) return; if (touchStartX.current === null || touchCurrentX.current === null ) { resetCardInteraction(); return; } const diffX = touchCurrentX.current - touchStartX.current; const currentPaper = papers[currentPaperIndex]; if (!currentPaper) { resetCardInteraction(); return; } if (Math.abs(diffX) > SWIPE_THRESHOLD_PAGE) { if (diffX > 0) { handleLike(currentPaper); } else { handleDislike(); } } else { resetCardInteraction(); } };
 
   const papersInStack = papers.slice(currentPaperIndex, currentPaperIndex + VISIBLE_CARDS_IN_STACK_PAGE);
 
@@ -197,7 +197,7 @@ export default function HomePage() {
           <div className={styles.searchBarContainer}><MagnifyingGlassIcon className={styles.searchIcon} /><input type="search" placeholder="論文を検索 (例: machine learning)" value={searchQuery} onChange={handleSearchInputChange} className={styles.searchInput} /></div>
           <button type="submit" className={styles.searchButton}>検索</button>
         </form>
-        <p className={styles.subtitle}>いいねした論文: {likedPapers.length}件 {currentSearchTerm && ` / 検索結果: "${currentSearchTerm}"`}</p>
+        <p className={styles.subtitle}>いいねした論文: {likedPapers.length}件 {currentSearchTerm && ` / 検索結果: "${currentSearchTerm}"`} </p>
       </header>
       {renderStatusDisplay()}
       {papers.length > 0 && (
@@ -206,8 +206,7 @@ export default function HomePage() {
             papersInStack.slice().reverse().map((paper, indexInVisibleStack_reversed) => {
               const indexInStack = (VISIBLE_CARDS_IN_STACK_PAGE - 1) - indexInVisibleStack_reversed;
               const isTopCard = indexInStack === 0;
-              // const cardDynamicStyles: React.CSSProperties = {}; // ★★★ const に変更 ★★★
-              let cardDynamicStyles: React.CSSProperties = {}; // isTopCard とそうでない場合で代入するため let のまま
+              const cardDynamicStyles: React.CSSProperties = {}; // ★★★ const に変更 ★★★
               let animationClass = '';
 
               if (isTopCard) {
@@ -215,11 +214,10 @@ export default function HomePage() {
                 if (interactionState.flyingDirection === 'left') animationClass = styles.animateFlyOutLeft || '';
                 if (interactionState.flyingDirection === 'right') animationClass = styles.animateFlyOutRight || '';
               } else {
-                // この部分は interactionState.flyingDirection が null の場合にのみ適用されるべき
                 if (!interactionState.flyingDirection) {
                     cardDynamicStyles.transform = `scale(${1 - (indexInStack * 0.04)}) translateY(${indexInStack * 8}px) rotate(${indexInStack * (indexInStack % 2 === 0 ? -1:1) * 1}deg)`;
                     cardDynamicStyles.opacity = 1 - (indexInStack * 0.4);
-                } else if (indexInStack === 1) { // 前のカードが飛んでいくとき、次のカードが上がってくるアニメーション
+                } else if (indexInStack === 1) {
                     animationClass = styles.animateNextCardEnter || '';
                 }
               }
@@ -231,7 +229,7 @@ export default function HomePage() {
                   isSummarizing={isSummarizing === paper.id}
                   onGenerateAiSummary={generateAiSummary}
                   onLike={handleLike}
-                  onDislike={handleDislike} // ★★★ 引数なしで渡す ★★★
+                  onDislike={handleDislike}
                   isLiked={isPaperLiked(paper.id)}
                   cardRef={isTopCard ? topCardRef : undefined}
                   cardStyle={{ ...cardDynamicStyles, zIndex: VISIBLE_CARDS_IN_STACK_PAGE - indexInStack }}

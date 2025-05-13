@@ -1,8 +1,7 @@
-// Kiga-ers/apps/web/src/app/api/papers/route.ts
+// apps/web/src/app/api/papers/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { XMLParser, X2jOptions } from 'fast-xml-parser';
 
-// --- arXiv API レスポンスの型定義 ---
 interface ArxivLinkAttribute {
   '@_href'?: string;
   '@_rel'?: string;
@@ -26,9 +25,9 @@ interface ArxivEntry {
   published?: string;
   title?: string;
   summary?: string;
-  author?: ArxivAuthor | ArxivAuthor[]; // 単一または配列
-  link?: ArxivLinkAttribute | ArxivLinkAttribute[]; // 単一または配列
-  category?: ArxivCategoryAttribute | ArxivCategoryAttribute[]; // 単一または配列
+  author?: ArxivAuthor | ArxivAuthor[];
+  link?: ArxivLinkAttribute | ArxivLinkAttribute[];
+  category?: ArxivCategoryAttribute | ArxivCategoryAttribute[];
   'arxiv:comment'?: string;
   'arxiv:primary_category'?: ArxivCategoryAttribute;
   'arxiv:doi'?: string;
@@ -36,7 +35,7 @@ interface ArxivEntry {
 }
 
 interface ArxivFeed {
-  entry?: ArxivEntry | ArxivEntry[]; // 単一または配列
+  entry?: ArxivEntry | ArxivEntry[];
   title?: string;
   id?: string;
   updated?: string;
@@ -50,7 +49,6 @@ interface ArxivRawData {
   feed?: ArxivFeed;
 }
 
-// --- フロントエンドに返す論文情報の型 ---
 interface PaperSummary {
   id: string;
   title: string;
@@ -62,31 +60,14 @@ interface PaperSummary {
   categories: string[];
 }
 
-// --- fast-xml-parser の設定 ---
 const parserOptions: Partial<X2jOptions> = {
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  // isArray オプションは、タグ名に基づいて強制的に配列にするものです。
-  // fast-xml-parser v4以降では、要素が1つしかない場合でも配列にするには `preserveOrder: true` と `isArray` の組み合わせや、
-  // 後処理で配列化するのが一般的です。
-  // ここでは、パース後の処理で配列でない場合に対応します。
-  // ★★★ 修正点: 以下の行を削除 ★★★
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // isArray: (tagName: string, jPath: string, isNodeEmpty: boolean, isAttribute: boolean): boolean => {
-  //   if (jPath === 'feed.entry' || jPath.endsWith('.entry.author') || jPath.endsWith('.entry.link') || jPath.endsWith('.entry.category')) {
-  //     return true;
-  //   }
-  //   if (jPath === 'feed.link') {
-  //       return true;
-  //   }
-  //   return false;
-  // },
   parseAttributeValue: true,
   parseTagValue: true,
   trimValues: true,
 };
 
-// --- 型ガード関数 (簡易版) ---
 function isArxivRawData(data: unknown): data is ArxivRawData {
   if (typeof data !== 'object' || data === null) {
     console.error('Type guard failed: Parsed data is not an object or is null.');
@@ -99,7 +80,6 @@ const ARXIV_API_URL = 'http://export.arxiv.org/api/query';
 const DEFAULT_CATEGORY = 'cat:cs.AI';
 const DEFAULT_MAX_RESULTS = '10';
 
-// ArxivEntryからPaperSummaryへの変換関数
 function transformEntryToPaperSummary(entryItem: ArxivEntry): PaperSummary | null {
     if (!entryItem) return null;
 
@@ -111,7 +91,7 @@ function transformEntryToPaperSummary(entryItem: ArxivEntry): PaperSummary | nul
     let pdfLink: string = '';
     const entryLinks = Array.isArray(entryItem.link) ? entryItem.link : (entryItem.link ? [entryItem.link] : []);
     const pdfEntry = entryLinks.find(
-        (link): link is { '@_title': 'pdf', '@_href': string } => // Type assertion for link
+        (link): link is { '@_title': 'pdf', '@_href': string } =>
         link !== null && typeof link === 'object' && '@_title' in link && link['@_title'] === 'pdf' && typeof link['@_href'] === 'string'
     );
     pdfLink = pdfEntry?.['@_href'] ?? '';
@@ -153,7 +133,6 @@ function transformEntryToPaperSummary(entryItem: ArxivEntry): PaperSummary | nul
         categories,
     };
 }
-
 
 export async function GET(request: NextRequest) {
   try {
@@ -198,25 +177,23 @@ export async function GET(request: NextRequest) {
     const parser = new XMLParser(parserOptions);
     const parsedData: unknown = parser.parse(xmlData);
 
-    if (!isArxivRawData(parsedData) || !parsedData.feed) { // feedの存在もチェック
+    if (!isArxivRawData(parsedData) || !parsedData.feed) {
       console.error('API: Parsed XML data does not match expected structure or feed is missing. Data:', JSON.stringify(parsedData, null, 2));
       return NextResponse.json({ error: 'Failed to parse arXiv data. Unexpected format received.' }, { status: 500 });
     }
     
-    // feed.entry が単一オブジェクトの場合も配列として扱えるようにする
     const entriesRaw = parsedData.feed.entry;
     const entriesArray: ArxivEntry[] = Array.isArray(entriesRaw) ? entriesRaw : (entriesRaw ? [entriesRaw] : []);
     
     let papers: PaperSummary[] = [];
 
-    if (entriesArray.length > 0) { // entriesArray が空でない場合のみ処理
+    if (entriesArray.length > 0) {
         papers = entriesArray
-            .map(transformEntryToPaperSummary) // ★★★ 修正点: 共通関数を使用 ★★★
+            .map(transformEntryToPaperSummary)
             .filter((paper): paper is PaperSummary => paper !== null);
     } else {
         console.log('API: No entries found in feed.');
     }
-
 
     console.log(`API: Returning ${papers.length} papers for query "${searchQueryValue}", start: ${start}.`);
     return NextResponse.json(papers);
