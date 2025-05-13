@@ -76,7 +76,7 @@ export default function HomePage() {
     } else {
       setMessage('新しい論文を探しています...');
     }
-    setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '', flyingDirection: null }));
+    setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '', flyingDirection: null })); // フェッチ開始前にインタラクション状態をリセット
     try {
       let apiUrl = effectiveSearchTerm ? `/api/papers?query=${encodeURIComponent(effectiveSearchTerm)}` : '/api/papers';
       apiUrl += `${apiUrl.includes('?') ? '&' : '?'}start=${currentOffset}`;
@@ -138,22 +138,91 @@ export default function HomePage() {
   };
 
   const goToNextPaper = useCallback(() => {
-    console.log('goToNextPaper called, resetting interaction state for next card');
-    setInteractionState(prev => ({
-        ...prev,
+    console.log('goToNextPaper called');
+    setInteractionState({ // Reset interaction state completely for the next card
+        isSwiping: false,
         cardTransform: '',
         feedbackColor: '',
         flyingDirection: null,
-    }));
+    });
+    touchStartX.current = null; // Also clear touch refs
+    touchCurrentX.current = null;
+    touchStartY.current = null;
     setCurrentPaperIndex(prevIndex => prevIndex + 1);
   }, []);
 
-  const handleSwipeAction = useCallback((direction: 'left' | 'right') => { const paperToRate = papers[currentPaperIndex]; if (!paperToRate) return; if (direction === 'right') { setLikedPapers(prev => prev.includes(paperToRate.id) ? prev : [...prev, paperToRate.id]); setInteractionState(prev => ({ ...prev, isSwiping:false, flyingDirection: 'right', feedbackColor: styles.feedbackPink })); } else { setInteractionState(prev => ({ ...prev, isSwiping: false, flyingDirection: 'left', feedbackColor: styles.feedbackLime })); } setTimeout(() => { goToNextPaper(); }, 600); }, [papers, currentPaperIndex, goToNextPaper]);
+  const handleSwipeAction = useCallback((direction: 'left' | 'right') => {
+    const paperToRate = papers[currentPaperIndex];
+    if (!paperToRate || interactionState.flyingDirection) { // Guard against multiple actions
+        console.log('handleSwipeAction: Skipped, no paper or already flying.');
+        return;
+    }
+    console.log(`handleSwipeAction: ${direction}`);
+    if (direction === 'right') {
+      setLikedPapers(prev => prev.includes(paperToRate.id) ? prev : [...prev, paperToRate.id]);
+      setInteractionState(prev => ({ ...prev, isSwiping: false, flyingDirection: 'right', feedbackColor: styles.feedbackPink, cardTransform: '' }));
+    } else {
+      setInteractionState(prev => ({ ...prev, isSwiping: false, flyingDirection: 'left', feedbackColor: styles.feedbackLime, cardTransform: '' }));
+    }
+    setTimeout(() => {
+      goToNextPaper();
+    }, 600); // Animation duration
+  }, [papers, currentPaperIndex, goToNextPaper, interactionState.flyingDirection]);
+
   const handleLike = useCallback(() => { if (!papers[currentPaperIndex]) return; handleSwipeAction('right'); }, [papers, currentPaperIndex, handleSwipeAction]);
   const handleDislike = useCallback(() => { if (!papers[currentPaperIndex]) return; handleSwipeAction('left'); }, [papers, currentPaperIndex, handleSwipeAction]);
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => { if (!e.touches[0] || interactionState.flyingDirection) return; resetCardInteraction(); touchStartX.current = e.touches[0].clientX; touchCurrentX.current = e.touches[0].clientX; touchStartY.current = e.touches[0].clientY; setInteractionState(prev => ({...prev, isSwiping: true, cardTransform: '', feedbackColor: '' })); }; // transformとfeedbackColorもリセット
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => { if (touchStartX.current === null || !e.touches[0] || touchStartY.current === null || !topCardRef.current || interactionState.flyingDirection) return; const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; touchCurrentX.current = currentX; const diffX = currentX - touchStartX.current; const diffY = Math.abs(currentY - touchStartY.current); if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) { if(interactionState.isSwiping) resetCardInteraction(); return; } const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION; const translateX = diffX * SWIPE_TRANSLATE_X_SCALE; setInteractionState(prev => ({ ...prev, cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`, feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD / 2 ? (diffX > 0 ? styles.feedbackPink : styles.feedbackLime) : '' })); };
-  const handleTouchEnd = () => { if (touchStartX.current === null || touchCurrentX.current === null || !interactionState.isSwiping || interactionState.flyingDirection) { if (interactionState.isSwiping && !interactionState.flyingDirection) resetCardInteraction(); return; } const diffX = touchCurrentX.current - touchStartX.current; if (Math.abs(diffX) > SWIPE_THRESHOLD) { handleSwipeAction(diffX > 0 ? 'right' : 'left'); } else { resetCardInteraction(); } /* setIsSwiping(false) は handleSwipeAction または resetCardInteraction で行われる */ };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!e.touches[0] || interactionState.flyingDirection) {
+      console.log('handleTouchStart: Skipped due to flyingDirection or no touches.');
+      return;
+    }
+    console.log('handleTouchStart: Initiating swipe');
+    // Reset transform and feedback color for a new swipe interaction
+    setInteractionState(prev => ({
+        ...prev,
+        isSwiping: true,
+        cardTransform: '',
+        feedbackColor: '',
+        // flyingDirection should be null here if the guard above passed
+    }));
+    touchStartX.current = e.touches[0].clientX;
+    touchCurrentX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null || !e.touches[0] || touchStartY.current === null || !topCardRef.current || interactionState.flyingDirection || !interactionState.isSwiping) {
+      return;
+    }
+    const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; touchCurrentX.current = currentX; const diffX = currentX - touchStartX.current; const diffY = Math.abs(currentY - touchStartY.current); if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) { if(interactionState.isSwiping) { console.log("TouchMove: Vertical scroll detected, resetting card."); resetCardInteraction();} return; } const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION; const translateX = diffX * SWIPE_TRANSLATE_X_SCALE; setInteractionState(prev => ({ ...prev, cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`, feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD / 2 ? (diffX > 0 ? styles.feedbackPink : styles.feedbackLime) : '' }));
+  };
+
+  const handleTouchEnd = () => {
+    if (!interactionState.isSwiping || interactionState.flyingDirection) {
+      if (!interactionState.flyingDirection && interactionState.isSwiping) { // Swiped but not enough, or cancelled
+        console.log("TouchEnd: Resetting because not flying and was swiping.");
+        resetCardInteraction();
+      } else {
+        console.log("TouchEnd: Skipped, not swiping or already flying.");
+      }
+      return;
+    }
+    if (touchStartX.current === null || touchCurrentX.current === null ) {
+      console.log("TouchEnd: Resetting due to null touch refs.");
+      resetCardInteraction();
+      return;
+    }
+    const diffX = touchCurrentX.current - touchStartX.current;
+    if (Math.abs(diffX) > SWIPE_THRESHOLD) {
+      console.log("TouchEnd: Swipe threshold met.");
+      handleSwipeAction(diffX > 0 ? 'right' : 'left');
+    } else {
+      console.log("TouchEnd: Swipe threshold NOT met, resetting card.");
+      resetCardInteraction();
+    }
+    // isSwiping will be set to false by either handleSwipeAction or resetCardInteraction
+  };
 
   const papersInStack = papers.slice(currentPaperIndex, currentPaperIndex + VISIBLE_CARDS_IN_STACK);
   console.log('Render - isLoading:', isLoading, 'papers.length:', papers.length, 'papersInStack.length:', papersInStack.length, 'currentPaperIndex:', currentPaperIndex, 'message:', message, 'currentSearchTerm:', currentSearchTerm);
@@ -168,34 +237,7 @@ export default function HomePage() {
         <main className={styles.mainContentArea}>
           {papersInStack.length > 0 ? (
               papersInStack.slice().reverse().map((paper, indexInVisibleStack_reversed) => {
-              const indexInStack = (VISIBLE_CARDS_IN_STACK - 1) - indexInVisibleStack_reversed;
-              const isTopCard = indexInStack === 0;
-              const isOnlyCardCurrentlyVisible = papersInStack.length === 1;
-
-              const cardDynamicStyles: React.CSSProperties = {};
-              let animationClass = '';
-
-              if (isTopCard) {
-                cardDynamicStyles.transform = interactionState.cardTransform;
-                if (interactionState.flyingDirection === 'left') animationClass = styles.animateFlyOutLeft || '';
-                if (interactionState.flyingDirection === 'right') animationClass = styles.animateFlyOutRight || '';
-              } else if (!isOnlyCardCurrentlyVisible) { // 唯一表示されるカードではない場合のみ、スタックスタイルを適用
-                if (!interactionState.flyingDirection) {
-                    cardDynamicStyles.transform = `scale(${1 - (indexInStack * 0.04)}) translateY(${indexInStack * 8}px) rotate(${indexInStack * (indexInStack % 2 === 0 ? -1:1) * 1}deg)`;
-                    cardDynamicStyles.opacity = 1 - (indexInStack * 0.4);
-                } else if (indexInStack === 1) {
-                    animationClass = styles.animateNextCardEnter || '';
-                }
-              }
-              
-              let cardClasses = styles.card;
-              if (isTopCard && interactionState.isSwiping && !interactionState.flyingDirection) { // flyingDirectionがないスワイプ中のみ
-                cardClasses += ` ${styles.activeGrab} ${styles.isSwiping}`;
-              } else if (isTopCard && interactionState.isSwiping) { // flyingDirectionがあるスワイプ中（ほぼアニメーション開始直後）
-                cardClasses += ` ${styles.activeGrab}`;
-              }
-              if (animationClass) cardClasses += ` ${animationClass}`;
-              
+              const indexInStack = (VISIBLE_CARDS_IN_STACK - 1) - indexInVisibleStack_reversed; const isTopCard = indexInStack === 0; const isOnlyCardCurrentlyVisible = papersInStack.length === 1; const cardDynamicStyles: React.CSSProperties = {}; let animationClass = ''; if (isTopCard) { cardDynamicStyles.transform = interactionState.cardTransform; if (interactionState.flyingDirection === 'left') animationClass = styles.animateFlyOutLeft || ''; if (interactionState.flyingDirection === 'right') animationClass = styles.animateFlyOutRight || ''; } else if (!isOnlyCardCurrentlyVisible) { if (!interactionState.flyingDirection) { cardDynamicStyles.transform = `scale(${1 - (indexInStack * 0.04)}) translateY(${indexInStack * 8}px) rotate(${indexInStack * (indexInStack % 2 === 0 ? -1:1) * 1}deg)`; cardDynamicStyles.opacity = 1 - (indexInStack * 0.4); } else if (indexInStack === 1) { animationClass = styles.animateNextCardEnter || ''; } } let cardClasses = styles.card; if (isTopCard && interactionState.isSwiping && !interactionState.flyingDirection) { cardClasses += ` ${styles.activeGrab} ${styles.isSwiping}`; } else if (isTopCard && interactionState.isSwiping) { cardClasses += ` ${styles.activeGrab}`; } if (animationClass) cardClasses += ` ${animationClass}`;
               return ( <div key={paper.id + '-card-' + indexInStack} ref={isTopCard ? topCardRef : null} className={cardClasses} style={{ zIndex: VISIBLE_CARDS_IN_STACK - indexInStack, touchAction: isTopCard ? 'none' : 'auto', ...cardDynamicStyles }} onTouchStart={isTopCard ? handleTouchStart : undefined} onTouchMove={isTopCard ? handleTouchMove : undefined} onTouchEnd={isTopCard ? handleTouchEnd : undefined} onTouchCancel={isTopCard ? handleTouchEnd : undefined} > {isTopCard && interactionState.isSwiping && interactionState.feedbackColor && !interactionState.flyingDirection && ( <div className={`${styles.swipeFeedbackOverlay} ${interactionState.feedbackColor}`}></div> )} <div className={`${styles.cardScrollableContent} thin-scrollbar`}> <h2 className={styles.cardTitle}><FormattedTextRenderer text={paper.title} /></h2> <p className={styles.cardAuthors}>Authors: {paper.authors.join(', ')}</p> <div className={styles.cardDates}> <span>Published: {new Date(paper.published).toLocaleDateString()}</span> <span>Updated: {new Date(paper.updated).toLocaleDateString()}</span> </div> <div className={styles.aiSummarySection}> <h3 className={styles.aiSummaryHeader}> <span className={styles.aiSummaryHeaderText}><SparklesIcon />AIによる要約</span> {!paper.aiSummary && !isSummarizing && ( <button onClick={(e) => { e.stopPropagation(); generateAiSummary(paper.id, paper.summary); }} className={styles.generateButton}>生成</button> )} </h3> {isSummarizing && currentPaperIndex < papers.length && papers[currentPaperIndex]?.id === paper.id ? ( <p className={styles.aiSummaryLoading}>AIが要約を生成中です...</p> ) : paper.aiSummary ? ( <p className={styles.aiSummaryText}><FormattedTextRenderer text={paper.aiSummary} /></p> ) : ( <p className={styles.aiSummaryPlaceholder}>（AI要約を生成しますか？）</p> )} </div> <details className={styles.abstractSection} onClick={(e) => e.stopPropagation()}> <summary className={styles.abstractSummary}><ChevronRightIcon />元のAbstractを見る</summary> <div className={styles.abstractContent}><FormattedTextRenderer text={paper.summary} /></div> </details> <div className={styles.categoriesContainer}> {paper.categories.map(category => (<span key={category} className={styles.categoryTag}>{category}</span>))} </div> </div> <div className={`${styles.pdfButtonArea} ${styles.actionButtonsContainer}`}> <button onClick={(e) => { e.stopPropagation(); handleDislike(); }} className={`${styles.pcActionButton} ${styles.pcDislikeButton}`} aria-label="興味なし"> <HandThumbDownIcon className={styles.pcActionButtonIcon} /><span className={styles.pcActionButtonText}>興味なし</span> </button> <div className={styles.pdfButtonWrapper}> {paper.pdfLink ? ( <a href={paper.pdfLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={styles.pdfButton}><ArrowDownTrayIcon />PDFを開く</a> ) : <div className={styles.pdfPlaceholder}></div>} </div> <button onClick={(e) => { e.stopPropagation(); handleLike(); }} className={`${styles.pcActionButton} ${styles.pcLikeButton}`} aria-label="興味あり"> <HandThumbUpIcon className={styles.pcActionButtonIcon} /><span className={styles.pcActionButtonText}>興味あり</span> </button> </div> </div> );
               })
           ) : !isLoading && papers.length > 0 && currentPaperIndex >= papers.length ? (
