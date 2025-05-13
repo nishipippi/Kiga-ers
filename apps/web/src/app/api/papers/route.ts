@@ -22,159 +22,147 @@ interface PaperSummary {
   categories: string[];
 }
 
+// XMLパース後の entry オブジェクトの期待される構造の一部を定義
+// (より厳密にする場合は、すべてのプロパティを定義)
+interface ArxivEntryItem {
+  id?: unknown;
+  title?: unknown;
+  summary?: unknown;
+  published?: unknown;
+  updated?: unknown;
+  link?: unknown; // 単一または配列の可能性
+  author?: unknown; // 単一または配列の可能性
+  category?: unknown; // 単一または配列の可能性
+}
+
+
 export async function GET() {
   try {
-    // arXiv APIへのリクエストURLを構築
     const queryParams = new URLSearchParams({
       search_query: DEFAULT_CATEGORY,
-      sortBy: 'submittedDate', // 投稿日でソート
-      sortOrder: 'descending', // 新しい順
+      sortBy: 'submittedDate',
+      sortOrder: 'descending',
       start: '0',
       max_results: MAX_RESULTS.toString(),
     });
     const url = `${ARXIV_API_URL}?${queryParams.toString()}`;
 
-    console.log(`Fetching papers from: ${url}`); // サーバー側のログ
+    console.log(`Fetching papers from: ${url}`);
 
-    // arXiv APIを呼び出す
-    const response = await fetch(url, { next: { revalidate: 3600 } }); // 1時間キャッシュを試す
+    const response = await fetch(url, { next: { revalidate: 3600 } });
 
     if (!response.ok) {
-       const errorText = await response.text(); // エラー内容を取得
+      const errorText = await response.text();
       console.error(`Failed to fetch papers from arXiv: ${response.status} ${response.statusText}`, errorText);
       throw new Error(`arXiv API Error: ${response.status} ${response.statusText}`);
     }
 
-    // XMLレスポンスを取得
     const xmlData = await response.text();
-
-    // XMLをJSONにパース
     const parser = new XMLParser({
-      ignoreAttributes: false, // 属性もパースする
-      attributeNamePrefix: '@_', // 属性名のプレフィックス
-      // isArray: (name) => ['entry', 'link', 'author', 'category'].includes(name), // 必要なら要素を常に配列に
+      ignoreAttributes: false,
+      attributeNamePrefix: '@_',
+      // isArray: (name) => ['entry', 'link', 'author', 'category'].includes(name), // 常に配列として扱いたい場合
     });
-    // jsonData の型を Record<string, unknown> にする (any を避ける)
     const jsonData: Record<string, unknown> = parser.parse(xmlData);
 
-    // パース結果の簡単なログ
-    // console.log('Parsed JSON structure:', jsonData?.feed ? Object.keys(jsonData.feed) : 'No feed found');
+    let papers: PaperSummary[] = [];
 
-    // 必要な情報を抽出して整形
-    let papers: PaperSummary[] = []; // 配列の型を指定
-
-    // jsonData.feed がオブジェクトであることを確認し、entry プロパティにアクセス
     if (typeof jsonData.feed === 'object' && jsonData.feed !== null && 'entry' in jsonData.feed) {
-      const feed = jsonData.feed as { entry?: unknown }; // feed の型を絞り込む
-      const entriesRaw = feed.entry; // entry は unknown 型
+      const feed = jsonData.feed as { entry?: unknown };
+      const entriesRaw = feed.entry;
+      const entriesArray = entriesRaw ? (Array.isArray(entriesRaw) ? entriesRaw : [entriesRaw]) : [];
 
-      // entryが単一の場合と配列の場合の両方に対応
-      const entries = entriesRaw ? (Array.isArray(entriesRaw) ? entriesRaw : [entriesRaw]) : [];
-
-      if (Array.isArray(entries)) {
-        // map のコールバック引数 entry の型を unknown に変更
-        papers = entries.map((entry: unknown): PaperSummary | null => { // Line 57: any -> unknown
-          // entry がオブジェクトであることを確認
-          if (typeof entry !== 'object' || entry === null) {
-            console.warn('Invalid entry found (not an object):', entry);
-            return null; // 不正なデータは null を返す
+      if (Array.isArray(entriesArray)) {
+        papers = entriesArray.map((entryInput: unknown): PaperSummary | null => { // Line 57: any -> unknown
+          if (typeof entryInput !== 'object' || entryInput === null) {
+            console.warn('Invalid entry found (not an object):', entryInput);
+            return null;
           }
-          // entry の型を Record<string, unknown> にキャストしてプロパティにアクセスしやすくする
-          const entryObj = entry as Record<string, unknown>;
+          const entry = entryInput as ArxivEntryItem; // ArxivEntryItem 型として扱う
 
-          // arXiv IDを抽出 (プロパティアクセスを安全に行う)
-          const idUrl = typeof entryObj.id === 'string' ? entryObj.id : '';
+          const idUrl = typeof entry.id === 'string' ? entry.id : '';
           let arxivId = '';
           if (idUrl.includes('/abs/')) {
             arxivId = idUrl.split('/abs/')[1] || '';
             if (arxivId) {
-              arxivId = arxivId.split('v')[0]; // バージョン情報を除去
+              arxivId = arxivId.split('v')[0];
             }
           }
           if (!arxivId) {
-            // IDが取得できないエントリーはスキップ
-            console.warn('Could not extract valid arXiv ID from:', idUrl, 'Skipping entry.');
+            console.warn('Could not extract valid arXiv ID from:', idUrl, '. Skipping entry.');
             return null;
           }
 
-          // PDFリンクを取得 (プロパティアクセスを安全に行う)
           let pdfLink = '';
-          const entryLinks = entryObj.link; // link は unknown 型
-          if (Array.isArray(entryLinks)) {
-            // find のコールバック引数 link の型を unknown に変更
-            const pdfEntry = entryLinks.find((link: unknown): link is Record<string, unknown> => // Line 73: any -> unknown (implicit in find) & type guard added
-              typeof link === 'object' && link !== null && (link as Record<string, unknown>)['@_title'] === 'pdf' && typeof (link as Record<string, unknown>)['@_href'] === 'string'
+          const linksRaw = entry.link;
+          const linksArray = linksRaw ? (Array.isArray(linksRaw) ? linksRaw : [linksRaw]) : [];
+          if (Array.isArray(linksArray)) {
+            const pdfEntry = linksArray.find((linkItem: unknown): linkItem is Record<string, unknown> => // Line 73: any -> unknown, and type guard
+              typeof linkItem === 'object' && linkItem !== null &&
+              (linkItem as Record<string, unknown>)['@_title'] === 'pdf' &&
+              typeof (linkItem as Record<string, unknown>)['@_href'] === 'string'
             );
-            pdfLink = pdfEntry ? (pdfEntry['@_href'] as string) : ''; // 型アサーション
-          } else if (typeof entryLinks === 'object' && entryLinks !== null) {
-            const link = entryLinks as Record<string, unknown>;
-            if (link['@_title'] === 'pdf' && typeof link['@_href'] === 'string') {
-              pdfLink = link['@_href'];
-            }
+            pdfLink = pdfEntry ? (pdfEntry['@_href'] as string) : '';
           }
           if (!pdfLink && idUrl.includes('/abs/')) {
             pdfLink = idUrl.replace('/abs/', '/pdf/') + '.pdf';
-            // console.log(`Guessed PDF link for ${arxivId}: ${pdfLink}`)
           }
 
-          // 著者情報を整形 (プロパティアクセスを安全に行う)
           let authors: string[] = [];
-          const entryAuthors = entryObj.author; // author は unknown 型
-          if (Array.isArray(entryAuthors)) {
-            // map/filter のコールバック引数 auth の型を unknown に変更
-            authors = entryAuthors
-              .map((auth: unknown) => (typeof auth === 'object' && auth !== null && 'name' in auth && typeof (auth as {name: unknown}).name === 'string' ? (auth as {name: string}).name : null)) // Line 88: any -> unknown (implicit in map)
-              .filter((name): name is string => name !== null && name.length > 0); // nullを除去し型ガード
-          } else if (typeof entryAuthors === 'object' && entryAuthors !== null && 'name' in entryAuthors && typeof (entryAuthors as {name: unknown}).name === 'string') {
-             authors = [(entryAuthors as {name: string}).name];
+          const authorsRaw = entry.author;
+          const authorsArray = authorsRaw ? (Array.isArray(authorsRaw) ? authorsRaw : [authorsRaw]) : [];
+          if (Array.isArray(authorsArray)) {
+            authors = authorsArray
+              .map((authItem: unknown) => { // Line 88: any -> unknown
+                if (typeof authItem === 'object' && authItem !== null && 'name' in authItem && typeof (authItem as { name?: unknown }).name === 'string') {
+                  return (authItem as { name: string }).name;
+                }
+                return null;
+              })
+              .filter((name): name is string => name !== null && name.length > 0);
           }
 
-          // カテゴリ情報を整形 (プロパティアクセスを安全に行う)
           let categories: string[] = [];
-          const entryCategories = entryObj.category; // category は unknown 型
-          if (Array.isArray(entryCategories)) {
-             // map/filter のコールバック引数 cat の型を unknown に変更
-            categories = entryCategories
-              .map((cat: unknown) => (typeof cat === 'object' && cat !== null && '@_term' in cat && typeof (cat as {'@_term': unknown})['@_term'] === 'string' ? (cat as {'@_term': string})['@_term'] : null)) // Line 97: any -> unknown (implicit in map)
-              .filter((term): term is string => term !== null && term.length > 0); // nullを除去し型ガード
-          } else if (typeof entryCategories === 'object' && entryCategories !== null && '@_term' in entryCategories && typeof (entryCategories as {'@_term': unknown})['@_term'] === 'string') {
-             categories = [(entryCategories as {'@_term': string})['@_term']];
+          const categoriesRaw = entry.category;
+          const categoriesArray = categoriesRaw ? (Array.isArray(categoriesRaw) ? categoriesRaw : [categoriesRaw]) : [];
+          if (Array.isArray(categoriesArray)) {
+            categories = categoriesArray
+              .map((catItem: unknown) => { // Line 97: any -> unknown
+                if (typeof catItem === 'object' && catItem !== null && '@_term' in catItem && typeof (catItem as { '@_term'?: unknown })['@_term'] === 'string') {
+                  return (catItem as { '@_term': string })['@_term'];
+                }
+                return null;
+              })
+              .filter((term): term is string => term !== null && term.length > 0);
           }
 
-          // title, summary, published, updated も安全に取得
-          const title = typeof entryObj.title === 'string' ? entryObj.title : 'タイトルなし';
-          const summaryRaw = typeof entryObj.summary === 'string' ? entryObj.summary : '要約なし';
+          const title = typeof entry.title === 'string' ? entry.title : 'タイトルなし';
+          const summaryRaw = typeof entry.summary === 'string' ? entry.summary : '要約なし';
           const summary = summaryRaw.trim().replace(/\s+/g, ' ');
-          const published = typeof entryObj.published === 'string' ? entryObj.published : '';
-          const updated = typeof entryObj.updated === 'string' ? entryObj.updated : '';
+          const published = typeof entry.published === 'string' ? entry.published : '';
+          const updated = typeof entry.updated === 'string' ? entry.updated : '';
 
-          // PaperSummary 型のオブジェクトを返す
           return {
-            id: arxivId, // 上で null チェック済み
-            title: title,
-            summary: summary,
-            authors: authors,
-            published: published,
-            updated: updated,
-            pdfLink: pdfLink,
-            categories: categories,
+            id: arxivId,
+            title,
+            summary,
+            authors,
+            published,
+            updated,
+            pdfLink,
+            categories,
           };
-        // map の結果から null を除去し、型を PaperSummary[] に確定
         }).filter((paper): paper is PaperSummary => paper !== null);
       } else {
-         console.warn('jsonData.feed.entry is not an array or undefined.');
+        console.warn('jsonData.feed.entry is not an array or is undefined.');
       }
     } else {
-       console.warn('No feed or entry found in arXiv response.');
-       // console.log('Full arXiv Response JSON:', JSON.stringify(jsonData, null, 2)); // 詳細デバッグ用
+      console.warn('No feed or entry found in arXiv response.');
     }
 
-    // JSONレスポンスを返す
     return NextResponse.json(papers);
-
   } catch (error) {
     console.error('Error in /api/papers:', error);
-    // エラーレスポンスを返す
     const message = error instanceof Error ? error.message : '不明なサーバーエラーが発生しました。';
     return NextResponse.json({ error: `論文の取得またはパースに失敗しました: ${message}` }, { status: 500 });
   }
