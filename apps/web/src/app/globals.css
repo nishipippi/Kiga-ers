@@ -3,14 +3,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* この下にbodyのスタイルなど */
 body {
-  @apply bg-brand-bg text-brand-primary; /* カスタムカラー適用 */
-  overflow: hidden; /* ページ全体のスクロールは引き続き禁止 */
+  @apply bg-brand-bg text-brand-primary;
+  overflow: hidden;
   overscroll-behavior-y: contain;
-}
-
-/* 見出しなどに少しポップな印象を与える共通スタイル (任意) */
-.pop-title {
-  @apply font-bold tracking-tight text-shadow-sm; /* text-shadowはカスタムプラグインか疑似要素で */
-  /* text-shadow: 1px 1px 2px rgba(42, 63, 84, 0.2); */
 }
