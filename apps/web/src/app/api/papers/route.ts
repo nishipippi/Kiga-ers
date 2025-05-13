@@ -73,7 +73,7 @@ export async function GET() {
 
       if (Array.isArray(entries)) {
         // map のコールバック引数 entry の型を unknown に変更
-        papers = entries.map((entry: unknown): PaperSummary | null => {
+        papers = entries.map((entry: unknown): PaperSummary | null => { // Line 57: any -> unknown
           // entry がオブジェクトであることを確認
           if (typeof entry !== 'object' || entry === null) {
             console.warn('Invalid entry found (not an object):', entry);
@@ -102,7 +102,7 @@ export async function GET() {
           const entryLinks = entryObj.link; // link は unknown 型
           if (Array.isArray(entryLinks)) {
             // find のコールバック引数 link の型を unknown に変更
-            const pdfEntry = entryLinks.find((link: unknown): link is Record<string, unknown> => // 型ガードを追加
+            const pdfEntry = entryLinks.find((link: unknown): link is Record<string, unknown> => // Line 73: any -> unknown (implicit in find) & type guard added
               typeof link === 'object' && link !== null && (link as Record<string, unknown>)['@_title'] === 'pdf' && typeof (link as Record<string, unknown>)['@_href'] === 'string'
             );
             pdfLink = pdfEntry ? (pdfEntry['@_href'] as string) : ''; // 型アサーション
@@ -123,7 +123,7 @@ export async function GET() {
           if (Array.isArray(entryAuthors)) {
             // map/filter のコールバック引数 auth の型を unknown に変更
             authors = entryAuthors
-              .map((auth: unknown) => (typeof auth === 'object' && auth !== null && 'name' in auth && typeof (auth as {name: unknown}).name === 'string' ? (auth as {name: string}).name : null))
+              .map((auth: unknown) => (typeof auth === 'object' && auth !== null && 'name' in auth && typeof (auth as {name: unknown}).name === 'string' ? (auth as {name: string}).name : null)) // Line 88: any -> unknown (implicit in map)
               .filter((name): name is string => name !== null && name.length > 0); // nullを除去し型ガード
           } else if (typeof entryAuthors === 'object' && entryAuthors !== null && 'name' in entryAuthors && typeof (entryAuthors as {name: unknown}).name === 'string') {
              authors = [(entryAuthors as {name: string}).name];
@@ -135,7 +135,7 @@ export async function GET() {
           if (Array.isArray(entryCategories)) {
              // map/filter のコールバック引数 cat の型を unknown に変更
             categories = entryCategories
-              .map((cat: unknown) => (typeof cat === 'object' && cat !== null && '@_term' in cat && typeof (cat as {'@_term': unknown})['@_term'] === 'string' ? (cat as {'@_term': string})['@_term'] : null))
+              .map((cat: unknown) => (typeof cat === 'object' && cat !== null && '@_term' in cat && typeof (cat as {'@_term': unknown})['@_term'] === 'string' ? (cat as {'@_term': string})['@_term'] : null)) // Line 97: any -> unknown (implicit in map)
               .filter((term): term is string => term !== null && term.length > 0); // nullを除去し型ガード
           } else if (typeof entryCategories === 'object' && entryCategories !== null && '@_term' in entryCategories && typeof (entryCategories as {'@_term': unknown})['@_term'] === 'string') {
              categories = [(entryCategories as {'@_term': string})['@_term']];
