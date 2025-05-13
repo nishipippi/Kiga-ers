@@ -239,7 +239,7 @@ export default function HomePage() {
           const indexInStack = (VISIBLE_CARDS_IN_STACK - 1) - indexInVisibleStack_reversed;
           const isTopCard = indexInStack === 0;
 
-          let cardDynamicStyles: React.CSSProperties = {};
+          const cardDynamicStyles: React.CSSProperties = {};
           let animationClass = ''; // This will be a string of CSS module class names or empty
 
           if (isTopCard) {
