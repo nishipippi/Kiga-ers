@@ -1,0 +1,79 @@
+/* apps/web/src/app/library/library.module.css */
+
+.libraryPageContainer {
+  padding: 1.5rem;
+  max-width: 1200px; /* ページ全体の最大幅 */
+  margin: 0 auto; /* 中央揃え */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.pageTitle {
+  font-size: 2rem; /* text-3xl or text-4xl */
+  font-weight: 700; /* font-bold */
+  color: #2A3F54; /* プロジェクトのメインカラー */
+  margin-bottom: 0.5rem;
+}
+
+.pageSubtitle {
+  font-size: 1rem; /* text-base */
+  color: #4b5563; /* やや薄めのテキストカラー */
+}
+
+.papersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* レスポンシブなグリッド */
+  gap: 1.5rem; /* カード間の隙間 */
+}
+
+.libraryCard {
+  /* PaperCard.module.css の .card.static スタイルを継承またはここで上書き */
+  /* 例: position: relative; width: 100%; など */
+  /* PaperCard.tsxでclassNameに渡すことで、PaperCard.module.cssのスタイルに加えて適用される */
+  /* 必要であれば、PaperCard自体のスタイルを調整するのではなく、ここで追加のスタイルを定義 */
+  cursor: pointer; /* 詳細表示があるため */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.libraryCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0px 15px 35px rgba(42, 63, 84, 0.15), 0px 8px 15px rgba(42, 63, 84, 0.1);
+}
+
+
+/* ライブラリが空の場合のスタイル */
+.emptyLibraryContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 1rem;
+  min-height: 60vh; /* フッターを考慮した高さ */
+  color: #6b7280; /* やや薄めのテキストカラー */
+}
+
+.emptyIcon {
+  width: 4rem; /* アイコンサイズ (64px) */
+  height: 4rem;
+  margin-bottom: 1.5rem;
+  color: #9ca3af; /* さらに薄いアイコンカラー */
+}
+
+.emptyTitle {
+  font-size: 1.5rem; /* text-2xl */
+  font-weight: 600;
+  color: #374151; /* 少し濃いめのテキストカラー */
+  margin-bottom: 0.75rem;
+}
+
+.emptyText {
+  font-size: 1rem; /* text-base */
+  line-height: 1.6;
+  max-width: 400px;
+}

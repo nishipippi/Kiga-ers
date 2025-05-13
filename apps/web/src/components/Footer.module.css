@@ -1,0 +1,72 @@
+/* apps/web/src/components/Footer.module.css */
+
+.footer {
+  width: 100%;
+  background-color: #ffffff; /* 背景色 (プロジェクトのテーマに合わせて調整) */
+  border-top: 1px solid #e5e7eb; /* 上境界線 (プロジェクトのテーマに合わせて調整) */
+  padding: 0.75rem 0; /* 上下パディング */
+  position: sticky; /* 画面下部に固定する場合 */
+  bottom: 0;
+  left: 0;
+  z-index: 50; /* 他の要素より手前に表示 */
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05); /* ちょっとした影 */
+}
+
+.nav {
+  display: flex;
+  justify-content: space-around; /* アイテムを均等に配置 */
+  align-items: center;
+  max-width: 500px; /* フッターの最大幅 (モバイルでの見た目を考慮) */
+  margin: 0 auto; /* 中央揃え */
+}
+
+.navLink {
+  display: flex;
+  flex-direction: column; /* アイコンとテキストを縦に並べる */
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem; /* パディング */
+  color: #6b7280; /* 通常時のテキスト・アイコン色 (プロジェクトのテーマに合わせて調整) */
+  text-decoration: none;
+  font-size: 0.75rem; /* テキストサイズ */
+  line-height: 1rem;
+  transition: color 0.2s ease-in-out;
+  border-radius: 0.375rem; /* 角丸 */
+  min-width: 60px; /* 最小幅を確保してタップしやすく */
+  text-align: center;
+}
+
+.navLink:hover {
+  color: #374151; /* ホバー時の色 (プロジェクトのテーマに合わせて調整) */
+  background-color: #f3f4f6; /* ホバー時の背景色 */
+}
+
+.navLink.active {
+  color: #2A3F54; /* アクティブ時の色 (プロジェクトのメインカラーなどに合わせる) */
+  font-weight: 600; /* アクティブ時は少し太字に */
+}
+
+.icon {
+  width: 1.5rem; /* アイコンサイズ (24px) */
+  height: 1.5rem;
+  margin-bottom: 0.125rem; /* アイコンとテキストの間隔 */
+}
+
+.navText {
+  display: block;
+}
+
+/* モバイルファーストなスタイルを意識し、必要に応じてメディアクエリで調整 */
+/* 例: タブレット以上ではテキストを常に表示するなど */
+/* @media (min-width: 640px) {
+  .navText {
+    display: inline;
+  }
+  .navLink {
+    flex-direction: row;
+    gap: 0.25rem;
+  }
+  .icon {
+    margin-bottom: 0;
+  }
+} */

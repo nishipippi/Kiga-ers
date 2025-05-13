@@ -1,0 +1,314 @@
+/* apps/web/src/app/library/[paperId]/detailPage.module.css */
+
+.pageContainer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  font-family: var(--font-geist-sans);
+  color: #333;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  text-align: center;
+  color: #666;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #2A3F54; /* メインカラー */
+  animation: spin 1s ease infinite;
+  margin-bottom: 1rem;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #2A3F54; /* メインカラー */
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
+}
+.backButton:hover {
+  text-decoration: underline;
+}
+.backIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.paperArticle {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.paperHeader {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.paperTitle {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2A3F54;
+  line-height: 1.3;
+  margin-bottom: 0.75rem;
+}
+
+.paperAuthors {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.paperMeta {
+  font-size: 0.8rem;
+  color: #777;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem; /* 縦横の隙間 */
+  margin-bottom: 1rem;
+}
+.pdfLink {
+  color: #1e69ba; /* リンクカラー */
+  text-decoration: none;
+  font-weight: 500;
+}
+.pdfLink:hover {
+  text-decoration: underline;
+}
+
+.categoriesContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.categoryTag {
+  background-color: #eef2f7; /* カテゴリタグの背景色 */
+  color: #374b64; /* カテゴリタグの文字色 */
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2A3F54;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 0.5rem;
+}
+.sectionIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #555; /* やや薄めのアイコン色 */
+}
+
+.summaryContent, .abstractContent {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #444;
+  white-space: pre-wrap; /* 改行を保持 */
+}
+.abstractContent {
+  max-height: 150px; /* 初期表示の高さ制限 */
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+.abstractContent.showFull {
+  max-height: none; /* 全文表示 */
+}
+.toggleAbstractButton {
+  background: none;
+  border: none;
+  color: #1e69ba;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0;
+}
+.toggleAbstractButton:hover {
+  text-decoration: underline;
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #fee2e2; /* 赤系の薄い背景 */
+  color: #b91c1c; /* 赤系の文字色 */
+  border: 1px solid #fecaca;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 2rem;
+}
+.removeButton:hover {
+  background-color: #fecaca;
+}
+.removeIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+
+/* AI Chat Section */
+.aiChatSection {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px dashed #ccc;
+}
+
+.chatHistory {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background-color: #f9f9f9;
+}
+
+.chatMessage {
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+.chatMessage.user {
+  background-color: #e0e7ff; /* ユーザーのメッセージ背景 */
+  margin-left: auto;
+  max-width: 80%;
+  text-align: right;
+}
+.chatMessage.ai {
+  background-color: #f0f0f0; /* AIのメッセージ背景 */
+  margin-right: auto;
+  max-width: 80%;
+}
+
+.messageRole {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #555;
+  margin-bottom: 0.3rem;
+}
+.chatMessage.user .messageRole {
+  text-align: right;
+}
+.chatMessage.ai .messageRole {
+  text-align: left;
+}
+
+.messageContent {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.typingIndicator {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+.typingIndicator span {
+  height: 8px;
+  width: 8px;
+  margin: 0 2px;
+  background-color: #aaa;
+  border-radius: 50%;
+  display: inline-block;
+  animation: typing 1.4s infinite ease-in-out both;
+}
+.typingIndicator span:nth-child(1) { animation-delay: -0.32s; }
+.typingIndicator span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typing {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+
+
+.aiError {
+  color: #b91c1c; /* エラーメッセージの色 */
+  background-color: #fee2e2;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.chatForm {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start; /* ボタンがテキストエリアの高さに依存しないように */
+}
+
+.chatInput {
+  flex-grow: 1;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-height: 50px; /* 最小高さ */
+  resize: vertical; /* 縦方向のリサイズのみ許可 */
+  font-family: inherit;
+}
+.chatInput:disabled {
+  background-color: #f0f0f0;
+}
+
+.chatSubmitButton {
+  background-color: #2A3F54; /* メインボタンカラー */
+  color: white;
+  border: none;
+  padding: 0.75rem; /* アイコンボタンなので正方形に近づける */
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  height: 50px; /* テキストエリアの初期高さに合わせる */
+  width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chatSubmitButton:hover:not(:disabled) {
+  background-color: #1e293b;
+}
+.chatSubmitButton:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+.sendIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
