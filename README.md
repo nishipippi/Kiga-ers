@@ -61,7 +61,7 @@ Kiga-ersは以下の技術を使用して構築されています。
 
 1.  **リポジトリをクローン**:
     ```bash
-    git clone https://github.com/あなたのGitHubユーザー名/Kiga-ers.git
+    git clone https://github.com/nishipippi/Kiga-ers.git
     cd Kiga-ers
     ```
 
@@ -80,7 +80,6 @@ Kiga-ersは以下の技術を使用して構築されています。
     # https://ai.google.dev/ から取得してください
     GEMINI_API_KEY=あなたのGemini_APIキーをここに設定
     ```
-    **注意**: `.env.local` ファイルは `.gitignore` に含まれており、Gitリポジトリにはコミットされません。
 
 4.  **開発サーバーを起動**:
     プロジェクトルートで以下のコマンドを実行します。
