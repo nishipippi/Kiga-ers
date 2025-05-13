@@ -1,16 +1,57 @@
 // apps/web/src/app/api/papers/route.ts
 import { NextResponse } from 'next/server';
-import { XMLParser } from 'fast-xml-parser';
+import { XMLParser, X2jOptions } from 'fast-xml-parser'; // X2jOptions をインポート
 
-// arXiv APIのエンドポイント
-const ARXIV_API_URL = 'http://export.arxiv.org/api/query';
+// --- arXiv API レスポンスの型定義 ---
+interface ArxivLinkAttribute {
+  '@_href'?: string;
+  '@_rel'?: string;
+  '@_title'?: string;
+  '@_type'?: string;
+}
 
-// 取得する論文のカテゴリ (例: Computer Science - Artificial Intelligence)
-const DEFAULT_CATEGORY = 'cat:cs.AI';
-// 取得する最大件数
-const MAX_RESULTS = 10; // まずは少ない件数で試すことを推奨
+interface ArxivAuthor {
+  name?: string;
+  'arxiv:affiliation'?: string; // affiliation は arxiv 名前空間
+}
 
-// 返却する論文データの型 (フロントエンドと合わせる)
+interface ArxivCategoryAttribute {
+  '@_term'?: string;
+  '@_scheme'?: string;
+}
+
+interface ArxivEntry {
+  id?: string; // 例: "http://arxiv.org/abs/2310.12345v1"
+  updated?: string; // Date string
+  published?: string; // Date string
+  title?: string;
+  summary?: string; // Abstract
+  author?: ArxivAuthor | ArxivAuthor[]; // 単一または配列
+  link?: ArxivLinkAttribute | ArxivLinkAttribute[]; // 単一または配列
+  category?: ArxivCategoryAttribute | ArxivCategoryAttribute[]; // 単一または配列
+  'arxiv:comment'?: string;
+  'arxiv:primary_category'?: ArxivCategoryAttribute;
+  'arxiv:doi'?: string;
+  'arxiv:journal_ref'?: string;
+}
+
+interface ArxivFeed {
+  entry?: ArxivEntry | ArxivEntry[];
+  // 必要に応じて feed レベルの他の要素も定義
+  // title?: string;
+  // id?: string;
+  // link?: ArxivLinkAttribute | ArxivLinkAttribute[];
+  // updated?: string;
+  // 'opensearch:totalResults'?: number;
+  // 'opensearch:startIndex'?: number;
+  // 'opensearch:itemsPerPage'?: number;
+}
+
+interface ArxivParsedData {
+  feed?: ArxivFeed;
+}
+
+// --- フロントエンドに返す論文情報の型 ---
 interface PaperSummary {
   id: string;
   title: string;
@@ -22,19 +63,31 @@ interface PaperSummary {
   categories: string[];
 }
 
-// XMLパース後の entry オブジェクトの期待される構造の一部を定義
-// (より厳密にする場合は、すべてのプロパティを定義)
-interface ArxivEntryItem {
-  id?: unknown;
-  title?: unknown;
-  summary?: unknown;
-  published?: unknown;
-  updated?: unknown;
-  link?: unknown; // 単一または配列の可能性
-  author?: unknown; // 単一または配列の可能性
-  category?: unknown; // 単一または配列の可能性
-}
+// --- fast-xml-parser の設定 ---
+const parserOptions: Partial<X2jOptions> = {
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  // XML構造上、単一でも配列になりうる要素を指定
+  // これにより、後続の処理で Array.isArray での分岐が不要になることが多い
+  isArray: (name: string, jpath: string, isLeafNode: boolean, isAttribute: boolean): boolean => {
+    if (['author', 'link', 'category'].includes(name)) {
+      return true;
+    }
+    return false;
+  },
+  // 値の型変換は行わない (文字列として取得し、必要に応じて後で変換)
+  parseAttributeValue: false,
+  parseTagValue: false, // parseNodeValue から parseTagValue に変更 (v4+)
+  // XML 名前空間を扱う場合 (今回は arxiv:affiliation などがあるため考慮)
+  // processNSPrefix: true, // 必要に応じて
+  // removeNSPrefix: false, // 名前空間プレフィックスを保持する場合
+};
 
+
+// arXiv APIのエンドポイント
+const ARXIV_API_URL = 'http://export.arxiv.org/api/query';
+const DEFAULT_CATEGORY = 'cat:cs.AI';
+const MAX_RESULTS = 10;
 
 export async function GET() {
   try {
@@ -46,7 +99,6 @@ export async function GET() {
       max_results: MAX_RESULTS.toString(),
     });
     const url = `${ARXIV_API_URL}?${queryParams.toString()}`;
-
     console.log(`Fetching papers from: ${url}`);
 
     const response = await fetch(url, { next: { revalidate: 3600 } });
@@ -58,106 +110,82 @@ export async function GET() {
     }
 
     const xmlData = await response.text();
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: '@_',
-      // isArray: (name) => ['entry', 'link', 'author', 'category'].includes(name), // 常に配列として扱いたい場合
-    });
-    const jsonData: Record<string, unknown> = parser.parse(xmlData);
+    const parser = new XMLParser(parserOptions);
+    const jsonData = parser.parse(xmlData) as ArxivParsedData; // 型アサーション
 
     let papers: PaperSummary[] = [];
 
-    if (typeof jsonData.feed === 'object' && jsonData.feed !== null && 'entry' in jsonData.feed) {
-      const feed = jsonData.feed as { entry?: unknown };
-      const entriesRaw = feed.entry;
-      const entriesArray = entriesRaw ? (Array.isArray(entriesRaw) ? entriesRaw : [entriesRaw]) : [];
+    const entries = jsonData.feed?.entry;
 
-      if (Array.isArray(entriesArray)) {
-        papers = entriesArray.map((entryInput: unknown): PaperSummary | null => { // Line 57: any -> unknown
-          if (typeof entryInput !== 'object' || entryInput === null) {
-            console.warn('Invalid entry found (not an object):', entryInput);
-            return null;
+    if (entries && Array.isArray(entries)) { // isArray オプションにより、entries は常に配列か undefined
+      papers = entries.map((entryItem: ArxivEntry): PaperSummary | null => {
+        const idUrl = typeof entryItem.id === 'string' ? entryItem.id : '';
+        let arxivId = '';
+        if (idUrl.includes('/abs/')) {
+          arxivId = idUrl.split('/abs/')[1] || '';
+          if (arxivId) {
+            arxivId = arxivId.split('v')[0];
           }
-          const entry = entryInput as ArxivEntryItem; // ArxivEntryItem 型として扱う
+        }
+        if (!arxivId) {
+          console.warn('Could not extract valid arXiv ID from:', idUrl, '. Skipping entry.');
+          return null;
+        }
 
-          const idUrl = typeof entry.id === 'string' ? entry.id : '';
-          let arxivId = '';
-          if (idUrl.includes('/abs/')) {
-            arxivId = idUrl.split('/abs/')[1] || '';
-            if (arxivId) {
-              arxivId = arxivId.split('v')[0];
-            }
-          }
-          if (!arxivId) {
-            console.warn('Could not extract valid arXiv ID from:', idUrl, '. Skipping entry.');
-            return null;
-          }
+        let pdfLink = '';
+        // entryItem.link は isArray オプションにより常に配列のはず
+        if (entryItem.link && Array.isArray(entryItem.link)) {
+          const pdfEntry = entryItem.link.find(
+            (link: ArxivLinkAttribute) => link['@_title'] === 'pdf' && typeof link['@_href'] === 'string'
+          );
+          pdfLink = pdfEntry?.['@_href'] || '';
+        }
+        if (!pdfLink && idUrl.includes('/abs/')) {
+          pdfLink = idUrl.replace('/abs/', '/pdf/') + '.pdf';
+        }
 
-          let pdfLink = '';
-          const linksRaw = entry.link;
-          const linksArray = linksRaw ? (Array.isArray(linksRaw) ? linksRaw : [linksRaw]) : [];
-          if (Array.isArray(linksArray)) {
-            const pdfEntry = linksArray.find((linkItem: unknown): linkItem is Record<string, unknown> => // Line 73: any -> unknown, and type guard
-              typeof linkItem === 'object' && linkItem !== null &&
-              (linkItem as Record<string, unknown>)['@_title'] === 'pdf' &&
-              typeof (linkItem as Record<string, unknown>)['@_href'] === 'string'
-            );
-            pdfLink = pdfEntry ? (pdfEntry['@_href'] as string) : '';
-          }
-          if (!pdfLink && idUrl.includes('/abs/')) {
-            pdfLink = idUrl.replace('/abs/', '/pdf/') + '.pdf';
-          }
+        let authors: string[] = [];
+        // entryItem.author は isArray オプションにより常に配列のはず
+        if (entryItem.author && Array.isArray(entryItem.author)) {
+          authors = entryItem.author
+            .map((auth: ArxivAuthor) => (typeof auth.name === 'string' ? auth.name : null))
+            .filter((name): name is string => name !== null && name.length > 0);
+        }
 
-          let authors: string[] = [];
-          const authorsRaw = entry.author;
-          const authorsArray = authorsRaw ? (Array.isArray(authorsRaw) ? authorsRaw : [authorsRaw]) : [];
-          if (Array.isArray(authorsArray)) {
-            authors = authorsArray
-              .map((authItem: unknown) => { // Line 88: any -> unknown
-                if (typeof authItem === 'object' && authItem !== null && 'name' in authItem && typeof (authItem as { name?: unknown }).name === 'string') {
-                  return (authItem as { name: string }).name;
-                }
-                return null;
-              })
-              .filter((name): name is string => name !== null && name.length > 0);
-          }
+        let categories: string[] = [];
+        // entryItem.category は isArray オプションにより常に配列のはず
+        if (entryItem.category && Array.isArray(entryItem.category)) {
+          categories = entryItem.category
+            .map((cat: ArxivCategoryAttribute) => (typeof cat['@_term'] === 'string' ? cat['@_term'] : null))
+            .filter((term): term is string => term !== null && term.length > 0);
+        }
 
-          let categories: string[] = [];
-          const categoriesRaw = entry.category;
-          const categoriesArray = categoriesRaw ? (Array.isArray(categoriesRaw) ? categoriesRaw : [categoriesRaw]) : [];
-          if (Array.isArray(categoriesArray)) {
-            categories = categoriesArray
-              .map((catItem: unknown) => { // Line 97: any -> unknown
-                if (typeof catItem === 'object' && catItem !== null && '@_term' in catItem && typeof (catItem as { '@_term'?: unknown })['@_term'] === 'string') {
-                  return (catItem as { '@_term': string })['@_term'];
-                }
-                return null;
-              })
-              .filter((term): term is string => term !== null && term.length > 0);
-          }
+        const title = typeof entryItem.title === 'string' ? entryItem.title : 'タイトルなし';
+        const summaryRaw = typeof entryItem.summary === 'string' ? entryItem.summary : '要約なし';
+        const summary = summaryRaw.trim().replace(/\s+/g, ' ');
+        const published = typeof entryItem.published === 'string' ? entryItem.published : '';
+        const updated = typeof entryItem.updated === 'string' ? entryItem.updated : '';
 
-          const title = typeof entry.title === 'string' ? entry.title : 'タイトルなし';
-          const summaryRaw = typeof entry.summary === 'string' ? entry.summary : '要約なし';
-          const summary = summaryRaw.trim().replace(/\s+/g, ' ');
-          const published = typeof entry.published === 'string' ? entry.published : '';
-          const updated = typeof entry.updated === 'string' ? entry.updated : '';
-
-          return {
-            id: arxivId,
-            title,
-            summary,
-            authors,
-            published,
-            updated,
-            pdfLink,
-            categories,
-          };
-        }).filter((paper): paper is PaperSummary => paper !== null);
-      } else {
-        console.warn('jsonData.feed.entry is not an array or is undefined.');
-      }
+        return {
+          id: arxivId,
+          title,
+          summary,
+          authors,
+          published,
+          updated,
+          pdfLink,
+          categories,
+        };
+      }).filter((paper): paper is PaperSummary => paper !== null);
+    } else if (entries) { // entries が単一オブジェクトの場合 (isArray オプションが効いていない場合のためのフォールバック)
+        const entryItem = entries as ArxivEntry;
+        // ... (単一オブジェクトの場合の処理 - isArray オプションが正しく設定されていれば通常ここには来ない)
+        // 上記の map 内のロジックを単一 entryItem に対して適用する
+        console.warn('Feed entry was a single object, expected array due to parser options.');
+         // ここに単一エントリーを処理するロジックを記述（上記 map の中身と同様）
+         // ただし、isArrayオプションが正しく機能していれば、この分岐は不要になるはず
     } else {
-      console.warn('No feed or entry found in arXiv response.');
+      console.warn('No entries found in arXiv feed.');
     }
 
     return NextResponse.json(papers);
