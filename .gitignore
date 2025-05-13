@@ -1,28 +1,45 @@
 # Dependencies
+#-------------------------------------------------------------------------------
+# Lockfile should be committed (pnpm-lock.yaml)
+
+# Ignore node_modules in root and all packages/apps
 node_modules/
 **/node_modules/
+
+# Ignore pnpm store (usually outside project, but good practice)
 .pnpm-store/
 
+
 # Build outputs
+#-------------------------------------------------------------------------------
 dist/
 .next/
 out/
+build/
+coverage/
+
 
 # Logs
+#-------------------------------------------------------------------------------
 logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
-# Local env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+
+# Local env files - IMPORTANT: Never commit API keys or secrets!
+#-------------------------------------------------------------------------------
+.env
+.env*.local
+.env.*.local
+!.env.example # Allow example env file if you create one
+
 
 # IDEs and editors
+#-------------------------------------------------------------------------------
 .vscode/
 .idea/
 *.suo
@@ -31,6 +48,24 @@ pnpm-debug.log*
 *.sln
 *.sw?
 
+
 # OS generated files
+#-------------------------------------------------------------------------------
 .DS_Store
 Thumbs.db
+
+
+# Monorepo / Build tools cache
+#-------------------------------------------------------------------------------
+.turbo/
+
+
+# Vercel specific
+#-------------------------------------------------------------------------------
+.vercel/
+
+
+# Other temporary files
+#-------------------------------------------------------------------------------
+*.tsbuildinfo
+
