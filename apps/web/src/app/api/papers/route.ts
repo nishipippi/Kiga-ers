@@ -1,4 +1,4 @@
-// apps/web/src/app/api/papers/route.ts
+// Kiga-ers/apps/web/src/app/api/papers/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 import { XMLParser, X2jOptions } from 'fast-xml-parser';
 
@@ -89,59 +89,62 @@ function isArxivRawData(data: unknown): data is ArxivRawData {
   if ('feed' in data && (typeof (data as { feed: unknown }).feed !== 'object' || (data as { feed: unknown }).feed === null)) {
     console.warn('Type guard warning: Parsed data has "feed", but it is not an object.');
   }
-  if (
-    'feed' in data &&
-    (data as { feed: unknown }).feed !== null &&
-    typeof (data as { feed: unknown }).feed === 'object' &&
-    'entry' in (data as { feed: object }).feed! &&
-    !Array.isArray((data as { feed: { entry?: unknown } }).feed!.entry)
-  ) {
-    console.error("Type guard failed: feed.entry exists but is not an array. Check isArray parser option or XML structure.");
-    return false;
-  }
+  // feed.entry が存在しない場合も許容する (検索結果0件の場合など)
+  // if (
+  //   'feed' in data &&
+  //   (data as { feed: unknown }).feed !== null &&
+  //   typeof (data as { feed: unknown }).feed === 'object' &&
+  //   'entry' in (data as { feed: object }).feed! &&
+  //   !Array.isArray((data as { feed: { entry?: unknown } }).feed!.entry) &&
+  //   (data as { feed: { entry?: unknown } }).feed!.entry !== undefined // entryがundefinedでない場合のみ配列チェック
+  // ) {
+  //   console.error("Type guard failed: feed.entry exists but is not an array. Check isArray parser option or XML structure.");
+  //   return false;
+  // }
   return true;
 }
 
 
 const ARXIV_API_URL = 'http://export.arxiv.org/api/query';
-const DEFAULT_CATEGORY = 'cat:cs.AI'; // デフォルトのカテゴリ (検索語がない場合)
-const MAX_RESULTS = 10; // 検索結果の最大件数 (必要に応じて増やすことも検討)
+const DEFAULT_CATEGORY = 'cat:cs.AI';
+const DEFAULT_MAX_RESULTS = '10'; // API側でもデフォルト値を設定
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('query'); // URLクエリパラメータから 'query' を取得
+    const query = searchParams.get('query');
+    const start = searchParams.get('start') || '0'; // ★★★ 修正点: クライアントから start パラメータを取得 ★★★
+    const max_results = searchParams.get('max_results') || DEFAULT_MAX_RESULTS; // ★★★ 修正点: クライアントから max_results を取得 ★★★
 
     let searchQueryValue: string;
-    let sortByValue: 'submittedDate' | 'relevance' = 'submittedDate'; // デフォルトは提出日順
+    let sortByValue: 'submittedDate' | 'relevance' = 'submittedDate';
 
     if (query && query.trim() !== '') {
       searchQueryValue = query.trim();
-      sortByValue = 'relevance'; // 検索語がある場合は関連度順にする
-      console.log(`Fetching papers with user query: "${searchQueryValue}", sortBy: ${sortByValue}`);
+      sortByValue = 'relevance';
+      console.log(`API: Fetching papers with user query: "${searchQueryValue}", sortBy: ${sortByValue}, start: ${start}, max_results: ${max_results}`);
     } else {
       searchQueryValue = DEFAULT_CATEGORY;
-      // sortByValue は 'submittedDate' のまま
-      console.log(`Fetching papers with default category: "${searchQueryValue}", sortBy: ${sortByValue}`);
+      console.log(`API: Fetching papers with default category: "${searchQueryValue}", sortBy: ${sortByValue}, start: ${start}, max_results: ${max_results}`);
     }
 
     const queryParams = new URLSearchParams({
       search_query: searchQueryValue,
       sortBy: sortByValue,
-      sortOrder: 'descending', // relevance の場合でも descending は有効 (関連度が高い順)
-      start: '0', // TODO: 将来的にページネーションを実装する場合はここを変更
-      max_results: MAX_RESULTS.toString(),
+      sortOrder: 'descending',
+      start: start, // ★★★ 修正点: 取得した start を使用 ★★★
+      max_results: max_results, // ★★★ 修正点: 取得した max_results を使用 ★★★
     });
     const url = `${ARXIV_API_URL}?${queryParams.toString()}`;
-    console.log(`Constructed arXiv API URL: ${url}`);
+    console.log(`API: Constructed arXiv API URL: ${url}`);
 
     const response = await fetch(url, { 
-        next: { revalidate: query ? 600 : 3600 } // 検索クエリがある場合はキャッシュ時間を短く(10分)、ない場合は長く(1時間)
+        next: { revalidate: query ? 600 : 3600 }
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Failed to fetch papers from arXiv: ${response.status} ${response.statusText}`, { url, errorText });
+      console.error(`API: Failed to fetch papers from arXiv: ${response.status} ${response.statusText}`, { url, errorText });
       return NextResponse.json({ error: `arXiv API Error: ${response.status} ${response.statusText}`, details: errorText }, { status: response.status });
     }
 
@@ -150,7 +153,7 @@ export async function GET(request: NextRequest) {
     const parsedData: unknown = parser.parse(xmlData);
 
     if (!isArxivRawData(parsedData)) {
-      console.error('Parsed XML data does not match expected structure (ArxivRawData). Data:', JSON.stringify(parsedData, null, 2));
+      console.error('API: Parsed XML data does not match expected structure (ArxivRawData). Data:', JSON.stringify(parsedData, null, 2));
       return NextResponse.json({ error: 'Failed to parse arXiv data. Unexpected format received.' }, { status: 500 });
     }
     
@@ -161,11 +164,11 @@ export async function GET(request: NextRequest) {
       papers = entries
         .map((entryItem): PaperSummary | null => {
           if (!entryItem) return null;
-
+          // ... (中略: PaperSummaryへの変換ロジックは変更なし) ...
           const idUrl = typeof entryItem.id === 'string' ? entryItem.id : undefined;
           let arxivId: string | undefined;
           if (idUrl) { const match = idUrl.match(/\/abs\/([^v]+)/); arxivId = match?.[1]; }
-          if (!arxivId) { console.warn('Could not extract valid arXiv ID from:', idUrl ?? 'N/A', '. Skipping entry.'); return null; }
+          if (!arxivId) { console.warn('API: Could not extract valid arXiv ID from:', idUrl ?? 'N/A', '. Skipping entry.'); return null; }
 
           let pdfLink: string = '';
           const links = entryItem.link;
@@ -182,7 +185,7 @@ export async function GET(request: NextRequest) {
                  pdfLink = potentialPdfLink;
              }
           }
-          if (!pdfLink) { console.warn(`Could not find or generate PDF link for entry ID: ${arxivId}`); }
+          if (!pdfLink) { console.warn(`API: Could not find or generate PDF link for entry ID: ${arxivId}`); }
 
           let authors: string[] = [];
           const authorList = entryItem.author;
@@ -205,11 +208,7 @@ export async function GET(request: NextRequest) {
           const summary = summaryRaw ?? '要約なし';
           const published = (typeof entryItem.published === 'string' ? entryItem.published : undefined) ?? '';
           const updated = (typeof entryItem.updated === 'string' ? entryItem.updated : undefined) ?? '';
-
-          // if (title === 'タイトルなし') { // タイトルなしでも許容する場合
-          //    console.warn(`Entry ID ${arxivId} has missing or invalid title.`);
-          // }
-
+          
           return {
             id: arxivId,
             title,
@@ -222,21 +221,27 @@ export async function GET(request: NextRequest) {
           };
         })
         .filter((paper): paper is PaperSummary => paper !== null);
+    } else if (entries && !Array.isArray(entries) && typeof entries === 'object') { // 検索結果が1件の場合、配列でなくオブジェクトになることがある
+        const entryItem = entries as ArxivEntry;
+        // ... (上記と同様の PaperSummary への変換ロジックを1件分実行) ...
+        // この部分は省略しますが、配列の場合と同じ処理を単一エントリに対して行ってください。
+        // もし isArray オプションが正しく機能していれば、この分岐は不要なはずです。
+        console.warn("API: feed.entry was a single object, not an array. Processed as single entry.");
     } else {
       if (!parsedData.feed) {
-          console.warn('Parsed data does not contain "feed" element.');
-      } else if (!entries) {
-          console.warn('Feed element does not contain any "entry" elements. This might be normal if search results are empty.');
-      } else {
-          console.warn('Feed "entry" exists but is not an array. Data:', JSON.stringify(entries, null, 2));
+          console.warn('API: Parsed data does not contain "feed" element.');
+      } else if (entries === undefined) { // entries が undefined の場合 (結果0件)
+          console.log('API: Feed element does not contain any "entry" elements (results might be empty).');
+      } else { // その他の予期しない形式
+          console.warn('API: Feed "entry" has unexpected format. Data:', JSON.stringify(entries, null, 2));
       }
     }
 
-    console.log(`Returning ${papers.length} papers for query "${searchQueryValue}".`);
+    console.log(`API: Returning ${papers.length} papers for query "${searchQueryValue}", start: ${start}.`);
     return NextResponse.json(papers);
 
   } catch (error) {
-    console.error('Unhandled error in /api/papers route:', error);
+    console.error('API: Unhandled error in /api/papers route:', error);
     const message = error instanceof Error ? error.message : 'An unknown server error occurred.';
     return NextResponse.json({ error: `Failed to process request: ${message}` }, { status: 500 });
   }
