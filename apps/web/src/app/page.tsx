@@ -76,7 +76,7 @@ export default function HomePage() {
     } else {
       setMessage('新しい論文を探しています...');
     }
-    setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '', flyingDirection: null })); // フェッチ開始前にインタラクション状態をリセット
+    setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '', flyingDirection: null }));
     try {
       let apiUrl = effectiveSearchTerm ? `/api/papers?query=${encodeURIComponent(effectiveSearchTerm)}` : '/api/papers';
       apiUrl += `${apiUrl.includes('?') ? '&' : '?'}start=${currentOffset}`;
@@ -124,36 +124,30 @@ export default function HomePage() {
 
   const generateAiSummary = useCallback(async (paperId: string, textToSummarize: string) => { if (!textToSummarize || isSummarizing) return; setIsSummarizing(true); try { const response = await fetch('/api/summarize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ textToSummarize }), }); if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(`要約の生成に失敗しました。 Status: ${response.status}. ${errorData.error || ''}`); } const data = await response.json(); setPapers(prevPapers => prevPapers.map(p => p.id === paperId ? { ...p, aiSummary: data.summary } : p)); } catch (error) { console.error('Failed to generate summary:', error); alert(`要約生成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`); } finally { setIsSummarizing(false); } }, [isSummarizing]);
   
-  const resetCardInteraction = () => {
-    console.log('resetCardInteraction called');
-    setInteractionState({
-        isSwiping: false,
+  const resetCardInteraction = (keepSwipingStatus = false) => {
+    console.log('resetCardInteraction called, keepSwipingStatus:', keepSwipingStatus);
+    setInteractionState(prev => ({
+        isSwiping: keepSwipingStatus ? prev.isSwiping : false,
         cardTransform: '',
         feedbackColor: '',
         flyingDirection: null,
-    });
-    touchStartX.current = null;
-    touchCurrentX.current = null;
-    touchStartY.current = null;
+    }));
+    if (!keepSwipingStatus) {
+        touchStartX.current = null;
+        touchCurrentX.current = null;
+        touchStartY.current = null;
+    }
   };
 
   const goToNextPaper = useCallback(() => {
     console.log('goToNextPaper called');
-    setInteractionState({ // Reset interaction state completely for the next card
-        isSwiping: false,
-        cardTransform: '',
-        feedbackColor: '',
-        flyingDirection: null,
-    });
-    touchStartX.current = null; // Also clear touch refs
-    touchCurrentX.current = null;
-    touchStartY.current = null;
+    resetCardInteraction(false); // Completely reset interaction state
     setCurrentPaperIndex(prevIndex => prevIndex + 1);
   }, []);
 
   const handleSwipeAction = useCallback((direction: 'left' | 'right') => {
     const paperToRate = papers[currentPaperIndex];
-    if (!paperToRate || interactionState.flyingDirection) { // Guard against multiple actions
+    if (!paperToRate || interactionState.flyingDirection) {
         console.log('handleSwipeAction: Skipped, no paper or already flying.');
         return;
     }
@@ -166,7 +160,7 @@ export default function HomePage() {
     }
     setTimeout(() => {
       goToNextPaper();
-    }, 600); // Animation duration
+    }, 600);
   }, [papers, currentPaperIndex, goToNextPaper, interactionState.flyingDirection]);
 
   const handleLike = useCallback(() => { if (!papers[currentPaperIndex]) return; handleSwipeAction('right'); }, [papers, currentPaperIndex, handleSwipeAction]);
@@ -178,14 +172,12 @@ export default function HomePage() {
       return;
     }
     console.log('handleTouchStart: Initiating swipe');
-    // Reset transform and feedback color for a new swipe interaction
-    setInteractionState(prev => ({
-        ...prev,
+    setInteractionState({
         isSwiping: true,
-        cardTransform: '',
-        feedbackColor: '',
-        // flyingDirection should be null here if the guard above passed
-    }));
+        cardTransform: '', 
+        feedbackColor: '', 
+        flyingDirection: null,
+    });
     touchStartX.current = e.touches[0].clientX;
     touchCurrentX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -195,14 +187,27 @@ export default function HomePage() {
     if (touchStartX.current === null || !e.touches[0] || touchStartY.current === null || !topCardRef.current || interactionState.flyingDirection || !interactionState.isSwiping) {
       return;
     }
-    const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; touchCurrentX.current = currentX; const diffX = currentX - touchStartX.current; const diffY = Math.abs(currentY - touchStartY.current); if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) { if(interactionState.isSwiping) { console.log("TouchMove: Vertical scroll detected, resetting card."); resetCardInteraction();} return; } const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION; const translateX = diffX * SWIPE_TRANSLATE_X_SCALE; setInteractionState(prev => ({ ...prev, cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`, feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD / 2 ? (diffX > 0 ? styles.feedbackPink : styles.feedbackLime) : '' }));
+    const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; touchCurrentX.current = currentX; const diffX = currentX - touchStartX.current; const diffY = Math.abs(currentY - touchStartY.current);
+    if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) {
+      if(interactionState.isSwiping) {
+        console.log("TouchMove: Vertical scroll detected, resetting card transform but keeping swipe status.");
+        // transformとfeedbackColorのみリセットし、isSwipingは維持する（指が離れるまではスワイプ試行中とみなす）
+        setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '' }));
+        // touchStartXなどをリセットすると、その後の横移動で再度スワイプ判定が始まってしまうため、
+        // ここではリセットしない。指が離れた(TouchEnd)時点で閾値未満なら完全にリセットされる。
+      }
+      return;
+    }
+    const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION;
+    const translateX = diffX * SWIPE_TRANSLATE_X_SCALE;
+    setInteractionState(prev => ({ ...prev, cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`, feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD / 2 ? (diffX > 0 ? styles.feedbackPink : styles.feedbackLime) : '' }));
   };
 
   const handleTouchEnd = () => {
     if (!interactionState.isSwiping || interactionState.flyingDirection) {
-      if (!interactionState.flyingDirection && interactionState.isSwiping) { // Swiped but not enough, or cancelled
-        console.log("TouchEnd: Resetting because not flying and was swiping.");
-        resetCardInteraction();
+      if (!interactionState.flyingDirection && interactionState.isSwiping) {
+        console.log("TouchEnd: Resetting because not flying and was swiping (threshold not met or cancelled).");
+        resetCardInteraction(false);
       } else {
         console.log("TouchEnd: Skipped, not swiping or already flying.");
       }
@@ -210,7 +215,7 @@ export default function HomePage() {
     }
     if (touchStartX.current === null || touchCurrentX.current === null ) {
       console.log("TouchEnd: Resetting due to null touch refs.");
-      resetCardInteraction();
+      resetCardInteraction(false);
       return;
     }
     const diffX = touchCurrentX.current - touchStartX.current;
@@ -219,9 +224,8 @@ export default function HomePage() {
       handleSwipeAction(diffX > 0 ? 'right' : 'left');
     } else {
       console.log("TouchEnd: Swipe threshold NOT met, resetting card.");
-      resetCardInteraction();
+      resetCardInteraction(false);
     }
-    // isSwiping will be set to false by either handleSwipeAction or resetCardInteraction
   };
 
   const papersInStack = papers.slice(currentPaperIndex, currentPaperIndex + VISIBLE_CARDS_IN_STACK);
