@@ -21,8 +21,8 @@ export default function HomePage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   // State to track the index of the currently displayed paper
   const [currentPaperIndex, setCurrentPaperIndex] = useState(0);
-  // State to store the IDs of liked papers (for future use, e.g., saving to DB/cache)
-  const [likedPapers, setLikedPapers] = useState<string[]>([]);
+  // State to store the IDs of liked papers
+  const [likedPapers, setLikedPapers] = useState<string[]>([]); // This variable is now used
   // State to display messages (loading, errors, end of list)
   const [message, setMessage] = useState<string | null>('論文を読み込み中...'); // Initial loading message
   // State to manage the loading status
@@ -108,7 +108,14 @@ export default function HomePage() {
     if (!currentPaper) return; // Do nothing if no paper is displayed
 
     console.log(`いいね: ${currentPaper.title} (ID: ${currentPaper.id})`); // Log for debugging (replace with actual logic)
-    setLikedPapers(prev => [...prev, currentPaper.id]); // Add paper ID to the liked list
+    // likedPapers stateを更新
+    setLikedPapers(prev => {
+        // すでにいいねされていなければ追加
+        if (!prev.includes(currentPaper.id)) {
+            return [...prev, currentPaper.id];
+        }
+        return prev; // 既に含まれていれば変更しない
+    });
 
     goToNextPaper(); // Move to the next paper
   };
@@ -140,9 +147,13 @@ export default function HomePage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 font-sans">
       {/* App Title */}
-      <h1 className="text-3xl md:text-4xl font-bold mb-8 text-gray-800 tracking-tight">
+      <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-800 tracking-tight">
         論文を見つけよう
       </h1>
+      {/* ★★★ likedPapers を使用する部分 (いいね数を表示) ★★★ */}
+      <p className="text-sm text-gray-500 mb-6">
+        いいねした論文数: {likedPapers.length}
+      </p>
 
       {/* Loading State */}
       {isLoading ? (
