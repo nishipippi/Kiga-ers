@@ -253,18 +253,25 @@ export default function HomePage() {
           const indexInStack = (VISIBLE_CARDS_IN_STACK - 1) - indexInVisibleStack_reversed; // 0がトップ、1が次
           const isTopCard = indexInStack === 0;
 
-          let cardDynamicStyle: React.CSSProperties = {};
-          let animationClass = '';
+          // ↓↓↓ 修正箇所: let を const に変更 ↓↓↓
+          const cardDynamicStyle: React.CSSProperties = {};
+          // ↑↑↑ 修正箇所 ↑↑↑
+          let animationClass = ''; // animationClass は再代入の可能性があるので let のまま
 
           if (isTopCard) {
-            cardDynamicStyle.transform = interactionState.cardTransform;
+            // cardDynamicStyle.transform = interactionState.cardTransform; // この行はコメントアウトまたは修正が必要
+                                                                       // React.CSSProperties型に直接代入はできない
+                                                                       // 正しくは以下のようにプロパティごとに行う
+            if (interactionState.cardTransform) { // transform がある場合のみ設定
+                cardDynamicStyle.transform = interactionState.cardTransform;
+            }
             if (interactionState.flyingDirection === 'left') animationClass = 'animate-flyOutLeft';
             if (interactionState.flyingDirection === 'right') animationClass = 'animate-flyOutRight';
-          } else { // 次のカードのスタイル (トップカードが飛んでいない時)
+          } else {
             if (!interactionState.flyingDirection) {
                 cardDynamicStyle.transform = `scale(${1 - (indexInStack * 0.05)}) translateY(${indexInStack * 10}px) rotate(${indexInStack * (indexInStack % 2 === 0 ? -1:1) * 1.5}deg)`;
                 cardDynamicStyle.opacity = 1 - (indexInStack * 0.3);
-            } else if (indexInStack === 1) { // トップが飛んでいて、このカードが次のトップになる場合
+            } else if (indexInStack === 1) {
                 animationClass = 'animate-nextCardEnter';
             }
           }
