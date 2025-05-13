@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import FormattedTextRenderer from '@/components/FormattedTextRenderer';
 import styles from './page.module.css';
-import { SparklesIcon, ChevronRightIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, ChevronRightIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface Paper {
   id: string;
@@ -28,8 +28,11 @@ export default function HomePage() {
   const [currentPaperIndex, setCurrentPaperIndex] = useState(0);
   const [likedPapers, setLikedPapers] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>('Kiga-ers へようこそ！論文を探しています...');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // 初期表示時はローディング中
   const [isSummarizing, setIsSummarizing] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState(''); // 検索バーの入力値
+  const [currentSearchTerm, setCurrentSearchTerm] = useState(''); // 実際にAPIに渡した検索語
 
   const [interactionState, setInteractionState] = useState<{
     isSwiping: boolean;
@@ -48,68 +51,108 @@ export default function HomePage() {
   const touchCurrentX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
-  const fetchPapers = useCallback(async (isInitialFetch = false) => {
-    console.log(`fetchPapers: Called (isInitialFetch: ${isInitialFetch})`);
-    if (!isInitialFetch && isLoading) {
-        console.log('fetchPapers: Already loading, skipping additional fetch.');
+  const fetchPapers = useCallback(async (isNewSearch = false, termToSearch = '') => {
+    const effectiveSearchTerm = isNewSearch ? termToSearch : currentSearchTerm;
+    console.log(`fetchPapers: Called (isNewSearch: ${isNewSearch}, term: "${effectiveSearchTerm}")`);
+
+    // 既に同じ条件でローディング中、または新しい検索でないのにローディング中なら重複実行を避ける
+    if (isLoading && (!isNewSearch || effectiveSearchTerm === currentSearchTerm)) {
+        console.log('fetchPapers: Already loading or same search, skipping.');
         return;
     }
+
     setIsLoading(true);
-    if (isInitialFetch) {
+    if (isNewSearch && effectiveSearchTerm) {
+        setMessage(`「${effectiveSearchTerm}」の論文を検索中...`);
+    } else if (isNewSearch) { // 初回デフォルトロード
         setMessage('Kiga-ers へようこそ！論文を探しています...');
-    } else {
-        setMessage('新しい論文を探しています...');
+    } else { // 追加ロード (検索語なしの場合)
+        setMessage('新しい論文を読み込んでいます...');
     }
     setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '', flyingDirection: null }));
+
     try {
-      const response = await fetch('/api/papers');
-      console.log('fetchPapers: Response status', response.status);
+      const apiUrl = effectiveSearchTerm ? `/api/papers?query=${encodeURIComponent(effectiveSearchTerm)}` : '/api/papers';
+      const response = await fetch(apiUrl);
+      console.log('fetchPapers: Response status', response.status, 'for URL:', apiUrl);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('fetchPapers: API error', response.status, errorData);
         throw new Error(`論文データの取得に失敗しました。 Status: ${response.status}. ${errorData.error || ''}`);
       }
       const data: Paper[] = await response.json();
       console.log('fetchPapers: Data received, length:', data.length);
-      if (data && data.length > 0) {
-        setPapers(prevPapers => {
-          const existingIds = new Set(prevPapers.map(p => p.id));
-          const newUniquePapers = data.filter(p => !existingIds.has(p.id));
-          return [...prevPapers, ...newUniquePapers];
-        });
-        setMessage(null);
-      } else {
-        setPapers(prevPapers => {
-            if (prevPapers.length === 0) {
-                setMessage('表示できる論文が見つかりませんでした。後ほど再読み込みしてください。');
-            }
-            return prevPapers;
-        });
+
+      if (isNewSearch) { // 新しい検索の場合、既存の論文を完全に置き換える
+        setPapers(data || []); // データがnullやundefinedの場合も考慮
+        setCurrentPaperIndex(0); // インデックスをリセット
+        if (data && data.length > 0) {
+            setMessage(null);
+        } else {
+            setMessage(effectiveSearchTerm ? `「${effectiveSearchTerm}」に一致する論文は見つかりませんでした。` : '表示できる論文が見つかりませんでした。');
+        }
+      } else { // 追加ロードの場合 (現在の検索語は維持)
+        if (data && data.length > 0) {
+            setPapers(prevPapers => {
+                const existingIds = new Set(prevPapers.map(p => p.id));
+                const newUniquePapers = data.filter(p => !existingIds.has(p.id));
+                return [...prevPapers, ...newUniquePapers];
+            });
+            setMessage(null);
+        } else {
+            // 追加ロードでデータが0件だった場合、特にメッセージは変更しない (既に表示中の論文があるため)
+            // ただし、もし全ての論文を見終わった後の追加ロードで0件なら、「以上です」のようなメッセージは出せる
+            console.log('fetchPapers: No new papers found for additional load.');
+        }
       }
     } catch (error) {
       console.error('fetchPapers: CATCH Error', error);
-      setPapers(prevPapers => {
-        if (prevPapers.length === 0) {
-            setMessage(`論文の読み込みエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
-        }
-        return prevPapers;
-      });
+      setMessage(`論文の読み込みエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
+      if (isNewSearch) setPapers([]); // エラー時は結果を空にする
     } finally {
       console.log('fetchPapers: FINALLY');
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, currentSearchTerm]); // isLoadingとcurrentSearchTermに依存
 
+  // 初回マウント時にデフォルトの論文をフェッチ
   useEffect(() => {
-    fetchPapers(true);
+    console.log('useEffect (Mount): Calling initial fetchPapers for default content.');
+    fetchPapers(true, ''); // isNewSearch=true, 検索語なしで初回ロード
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // マウント時に一度だけ実行
 
+  // 論文が少なくなった時の追加ロード (現在の検索語がない場合のみ)
   useEffect(() => {
-    if (papers.length > 0 && currentPaperIndex >= papers.length - VISIBLE_CARDS_IN_STACK && !isLoading) {
-      fetchPapers(false);
+    console.log('useEffect (Index Change Check): papers.length:', papers.length, 'currentPaperIndex:', currentPaperIndex, 'isLoading:', isLoading, 'currentSearchTerm:', currentSearchTerm);
+    if (!currentSearchTerm && papers.length > 0 && currentPaperIndex >= papers.length - VISIBLE_CARDS_IN_STACK && !isLoading) {
+      console.log('useEffect (Index Change): Condition met for fetching more (non-search) papers.');
+      fetchPapers(false, ''); // isNewSearch=false, 検索語なしで追加ロード
     }
-  }, [currentPaperIndex, papers.length, isLoading, fetchPapers]);
+  }, [currentPaperIndex, papers.length, isLoading, fetchPapers, currentSearchTerm]);
+
+
+  const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const handleSearchSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
+    if (event) event.preventDefault();
+    const term = searchQuery.trim();
+    // 既に同じ検索語で検索済みか、またはローディング中でなければ検索実行
+    if (term === currentSearchTerm && papers.length > 0 && !isLoading) {
+        console.log('Search: Same term and results exist, not re-searching.');
+        return;
+    }
+    if (isLoading && term === currentSearchTerm) {
+        console.log('Search: Already loading for this term.');
+        return;
+    }
+
+    console.log('Search submitted with new query:', term);
+    setCurrentSearchTerm(term); // これが fetchPapers の依存配列に入っているので、再生成される
+    fetchPapers(true, term);    // isNewSearch=true で新しい検索を実行
+  };
+
 
   const generateAiSummary = useCallback(async (paperId: string, textToSummarize: string) => {
     if (!textToSummarize || isSummarizing) return;
@@ -131,9 +174,10 @@ export default function HomePage() {
   const handleTouchEnd = () => { if (touchStartX.current === null || touchCurrentX.current === null || !interactionState.isSwiping || interactionState.flyingDirection) { if (interactionState.isSwiping && !interactionState.flyingDirection) resetCardInteraction(); return; } const diffX = touchCurrentX.current - touchStartX.current; if (Math.abs(diffX) > SWIPE_THRESHOLD) { handleSwipeAction(diffX > 0 ? 'right' : 'left'); } else { resetCardInteraction(); } setInteractionState(prev => ({...prev, isSwiping: false })); };
 
   const papersInStack = papers.slice(currentPaperIndex, currentPaperIndex + VISIBLE_CARDS_IN_STACK);
-  console.log('Render - isLoading:', isLoading, 'papers.length:', papers.length, 'papersInStack.length:', papersInStack.length, 'currentPaperIndex:', currentPaperIndex, 'message:', message);
+  console.log('Render - isLoading:', isLoading, 'papers.length:', papers.length, 'papersInStack.length:', papersInStack.length, 'currentPaperIndex:', currentPaperIndex, 'message:', message, 'searchTerm:', currentSearchTerm);
 
-  if (isLoading && papers.length === 0) {
+  // --- ローディング/メッセージ表示 ---
+  if (isLoading && papers.length === 0) { // 初回検索中 or 新規検索でまだ結果がない
     return (
       <div className={styles.loadingStateContainer}>
         <div className={styles.loadingStateBox}>
@@ -144,12 +188,14 @@ export default function HomePage() {
     );
   }
 
-  if (!isLoading && papers.length === 0) {
+  if (!isLoading && papers.length === 0) { // 検索後結果0件 or 初回ロードで結果0件
     return (
       <div className={styles.loadingStateContainer}>
         <div className={styles.loadingStateBox}>
-          <h1 className={`${styles.loadingStateTitle} pop-title`}>{message || "表示できる論文がありません。"}</h1>
-          <button onClick={() => fetchPapers(true)} className={styles.reloadButton}> 再読み込み </button>
+          <h1 className={`${styles.loadingStateTitle} pop-title`}>{message || (currentSearchTerm ? `「${currentSearchTerm}」に一致する論文はありません。` : "表示できる論文がありません。")}</h1>
+          <button onClick={() => fetchPapers(true, currentSearchTerm || '')} className={styles.reloadButton}>
+            {currentSearchTerm ? "再検索" : "再読み込み"}
+          </button>
         </div>
       </div>
     );
@@ -159,7 +205,23 @@ export default function HomePage() {
     <div className={styles.pageContainer}>
       <header className={styles.header}>
         <h1 className={`${styles.title} pop-title`}>Kiga-ers</h1>
-        <p className={styles.subtitle}>いいねした論文: {likedPapers.length}件</p>
+        <form onSubmit={handleSearchSubmit} className={styles.searchForm}>
+          <div className={styles.searchBarContainer}>
+            <MagnifyingGlassIcon className={styles.searchIcon} />
+            <input
+              type="search"
+              placeholder="論文を検索 (例: machine learning)"
+              value={searchQuery}
+              onChange={handleSearchInputChange}
+              className={styles.searchInput}
+            />
+          </div>
+          <button type="submit" className={styles.searchButton}>検索</button>
+        </form>
+        <p className={styles.subtitle}>
+          いいねした論文: {likedPapers.length}件
+          {currentSearchTerm && ` / 検索語: "${currentSearchTerm}"`}
+        </p>
       </header>
 
       <main className={styles.mainContentArea}>
@@ -235,8 +297,8 @@ export default function HomePage() {
                 </div>
             );
             })
-        ) : (
-          !isLoading && <div className={styles.loadingStateContainer}><div className={styles.loadingStateBox}><h1 className={`${styles.loadingStateTitle} pop-title`}>{message || "全ての論文を見終わりました。"}</h1><button onClick={() => fetchPapers(true)} className={styles.reloadButton}>再読み込み</button></div></div>
+        ) : ( // papersInStackが空だが、まだローディング中でない、かつpapersに何かデータがある場合 (＝全て見終わった)
+          !isLoading && papers.length > 0 && <div className={styles.loadingStateContainer}><div className={styles.loadingStateBox}><h1 className={`${styles.loadingStateTitle} pop-title`}>{currentSearchTerm ? `「${currentSearchTerm}」の検索結果は以上です。` : "全ての論文を見終わりました。"}</h1><button onClick={() => fetchPapers(true, currentSearchTerm || '')} className={styles.reloadButton}>{currentSearchTerm ? "再検索" : "再読み込み"}</button></div></div>
         )}
       </main>
       {isLoading && papers.length > 0 && (

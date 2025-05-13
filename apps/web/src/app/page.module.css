@@ -4,24 +4,24 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 100vh; /* 画面の高さいっぱいに広がる */
-  padding: 0.75rem; /* p-3 */
+  min-height: 100vh;
+  padding: 0.75rem;
   user-select: none;
 }
 @media (min-width: 640px) { /* sm */
   .pageContainer {
-    padding: 1rem; /* p-4 */
+    padding: 1rem;
   }
 }
 @media (min-width: 768px) { /* md */
   .pageContainer {
-    padding: 1.5rem; /* p-6 */
+    padding: 1.5rem;
   }
 }
 
 .header {
   margin-top: 1rem;
-  margin-bottom: 1.5rem; /* カードとのスペースを少し確保 */
+  margin-bottom: 0.5rem; /* 検索フォームがあるので少し詰める */
   text-align: center;
   width: 100%;
   padding-left: 0.5rem;
@@ -31,172 +31,166 @@
 @media (min-width: 640px) { /* sm */
   .header {
     margin-top: 1.5rem;
-    margin-bottom: 2rem;
   }
 }
 
 .title {
-  font-size: 1.875rem; /* text-3xl */
+  font-size: 1.875rem; 
   line-height: 2.25rem;
   color: #2A3F54;
   text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-@media (min-width: 640px) { /* sm */ .title { font-size: 2.25rem; line-height: 2.5rem; } }
-@media (min-width: 768px) { /* md */ .title { font-size: 3rem; line-height: 1; } }
+@media (min-width: 640px) { .title { font-size: 2.25rem; line-height: 2.5rem; } }
+@media (min-width: 768px) { .title { font-size: 3rem; line-height: 1; } }
+
+/* --- 検索フォームのスタイル --- */
+.searchForm {
+  margin-top: 0.75rem; /* ヘッダータイトルとの間 */
+  margin-bottom: 0.75rem; /* サブタイトルとの間 */
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 30rem; /* 検索バーの最大幅を少し調整 */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.searchBarContainer {
+  position: relative;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.875rem; /* アイコンの位置調整 */
+  height: 1.125rem; /* アイコンサイズ少し調整 */
+  width: 1.125rem;
+  color: rgba(42, 63, 84, 0.5); /* 少し濃く */
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.625rem 0.875rem 0.625rem 2.75rem; /* 左パディングをアイコン分確保 */
+  font-size: 0.875rem;
+  border: 1px solid rgba(42, 63, 84, 0.3); /* ボーダー少し濃く */
+  border-radius: 0.375rem; /* rounded-md */
+  background-color: #FFFFFF;
+  color: #2A3F54;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  line-height: 1.25rem; /* フォントサイズに合わせる */
+}
+.searchInput:focus {
+  border-color: #A9CADB;
+  box-shadow: 0 0 0 3px rgba(169, 202, 219, 0.4); /* フォーカスリングを少し太く */
+}
+.searchInput::placeholder {
+  color: rgba(42, 63, 84, 0.5);
+}
+.searchInput::-webkit-search-cancel-button {
+  cursor: pointer;
+  margin-right: 0.5rem; /* クリアボタンの位置調整 */
+}
+
+.searchButton {
+  padding: 0.625rem 1.25rem; /* パディング調整 */
+  font-size: 0.875rem;
+  font-weight: 500; /* 少し細く */
+  background-color: #2A3F54;
+  color: white;
+  border: none;
+  border-radius: 0.375rem; /* rounded-md */
+  cursor: pointer;
+  transition: background-color 0.2s;
+  line-height: 1.25rem; /* フォントサイズに合わせる */
+}
+.searchButton:hover {
+  background-color: rgba(42, 63, 84, 0.85);
+}
+/* --- 検索フォームのスタイルここまで --- */
+
 
 .subtitle {
-  font-size: 0.75rem; /* text-xs */
+  font-size: 0.75rem;
   line-height: 1rem;
   color: rgba(42, 63, 84, 0.7);
-  margin-top: 0.25rem;
+  margin-top: 0.5rem; /* 検索フォームとの間 */
 }
-@media (min-width: 640px) { /* sm */ .subtitle { font-size: 0.875rem; line-height: 1.25rem; } }
+@media (min-width: 640px) { .subtitle { font-size: 0.875rem; line-height: 1.25rem; } }
 
 .mainContentArea {
   position: relative;
   width: 100%;
-  max-width: 32rem; /* max-w-lg */
-  /* カードの高さは内容に依存させるが、スタック表示のためある程度の高さを確保 */
-  /* このエリア自体はカードを中央に配置するためのコンテナ */
-  min-height: 60vh; /* カードが最低これくらいの高さに表示されるように */
-  flex-grow: 1; /* ヘッダー以外の残りのスペースを埋める */
+  max-width: 32rem;
+  min-height: 60vh;
+  flex-grow: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 1rem; /* カード上部のマージン */
-  padding-bottom: 3rem; /* カード下部のマージン (スクロールで見切れないように) */
+  padding-top: 1rem;
+  padding-bottom: 3rem;
 }
-@media (min-width: 640px) { /* sm */
-  .mainContentArea {
-    min-height: 65vh;
-    padding-bottom: 4rem;
-  }
-}
-@media (min-width: 1280px) { /* xl */
-  .mainContentArea {
-     max-width: 36rem; /* xl:max-w-xl */
-  }
-}
+@media (min-width: 640px) { .mainContentArea { min-height: 65vh; padding-bottom: 4rem; } }
+@media (min-width: 1280px) { .mainContentArea { max-width: 36rem; } }
 
-/* --- カードスタックとカード自体のスタイル --- */
 .card {
-  position: absolute; /* スタックのためにabsolute */
+  position: absolute;
   background-color: #FFFFFF;
   border-radius: 0.75rem;
   box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15);
   padding: 1rem;
-  width: 90vw; /* モバイルでの幅 */
-  max-width: 100%; /* 親コンテナの幅を超えない */
+  width: 90vw;
+  max-width: 100%;
   text-align: left;
   border: 1px solid rgba(42, 63, 84, 0.1);
   display: flex;
   flex-direction: column;
   cursor: grab;
-  transition-property: transform, background-color, opacity; /* opacityも追加 */
+  transition-property: transform, background-color, opacity;
   transition-duration: 0.3s;
   transition-timing-function: ease-out;
-  /* カードの高さは内容に依存させつつ、最大値を設ける */
-  max-height: 80vh; /* ビューポートの80%を最大高さとする */
-  /*  min-height: 350px; /* あまりに内容が少ない場合でも最低この高さは維持 */
+  max-height: 80vh;
 }
-.card.isSwiping {
-  transition-duration: 0s !important;
-}
-.card.activeGrab {
-  cursor: grabbing;
-}
+.card.isSwiping { transition-duration: 0s !important; }
+.card.activeGrab { cursor: grabbing; }
+@media (min-width: 640px) { .card { border-radius: 1rem; padding: 1.25rem; width: 100%; } }
+@media (min-width: 768px) { .card { padding: 1.5rem; } }
 
-@media (min-width: 640px) { /* sm */
-  .card {
-    border-radius: 1rem;
-    padding: 1.25rem;
-    width: 100%; /* PCでは親コンテナ幅いっぱい */
-    /* max-height: 75vh; */
-    /* min-height: 400px; */
-  }
-}
-@media (min-width: 768px) { /* md */
-  .card {
-    padding: 1.5rem;
-  }
-}
-
-.swipeFeedbackOverlay {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  opacity: 0.3; /* Tailwindでは opacity-40 だったので少し調整 */
-  z-index: 0;
-  pointer-events: none; /* 下の要素の操作を妨げないように */
-}
+.swipeFeedbackOverlay { position: absolute; inset: 0; border-radius: inherit; opacity: 0.3; z-index: 0; pointer-events: none; }
 .feedbackPink { background-color: #EC4899; }
 .feedbackLime { background-color: #84CC16; }
 
-.cardScrollableContent {
-  position: relative;
-  z-index: 10;
-  flex-grow: 1; /* 利用可能な高さを埋める */
-  overflow-y: auto; /* 内容がカードの高さを超えたらスクロール */
-  touch-action: pan-y;
-  /* globals.css の .thin-scrollbar を適用 */
-}
+.cardScrollableContent { position: relative; z-index: 10; flex-grow: 1; overflow-y: auto; touch-action: pan-y; }
 
-.cardTitle {
-  font-size: 1rem; line-height: 1.5rem;
-  font-weight: 600; margin-bottom: 0.5rem;
-  color: #2A3F54; position: sticky; top: 0;
-  background-color: rgba(255, 255, 255, 0.9); /* 透明度少し上げる */
-  backdrop-filter: blur(4px);
-  padding-top: 0.5rem; padding-bottom: 0.375rem;
-  z-index: 20;
-}
+.cardTitle { font-size: 1rem; line-height: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: #2A3F54; position: sticky; top: 0; background-color: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px); padding-top: 0.5rem; padding-bottom: 0.375rem; z-index: 20; }
 @media (min-width: 640px) { .cardTitle { font-size: 1.125rem; line-height: 1.75rem; } }
 @media (min-width: 768px) { .cardTitle { font-size: 1.25rem; line-height: 1.75rem; } }
 
-.cardAuthors {
-  font-size: 0.75rem; line-height: 1rem;
-  color: rgba(42, 63, 84, 0.7); margin-bottom: 0.5rem; font-style: italic;
-}
+.cardAuthors { font-size: 0.75rem; line-height: 1rem; color: rgba(42, 63, 84, 0.7); margin-bottom: 0.5rem; font-style: italic; }
 @media (min-width: 640px) { .cardAuthors { font-size: 0.875rem; line-height: 1.25rem; } }
 
-.cardDates {
-  font-size: 0.625rem; line-height: 0.75rem;
-  color: rgba(42, 63, 84, 0.5); margin-bottom: 0.75rem;
-}
+.cardDates { font-size: 0.625rem; line-height: 0.75rem; color: rgba(42, 63, 84, 0.5); margin-bottom: 0.75rem; }
 .cardDates span + span::before { content: '/'; margin-left: 0.375rem; margin-right: 0.375rem; }
 @media (min-width: 640px) { .cardDates { font-size: 0.75rem; line-height: 1rem; } }
 
-.aiSummarySection {
-  margin-bottom: 0.75rem; padding: 0.75rem;
-  background-color: rgba(42, 63, 84, 0.05); border-radius: 0.5rem;
-  border: 1px solid rgba(42, 63, 84, 0.1);
-}
+.aiSummarySection { margin-bottom: 0.75rem; padding: 0.75rem; background-color: rgba(42, 63, 84, 0.05); border-radius: 0.5rem; border: 1px solid rgba(42, 63, 84, 0.1); }
 @media (min-width: 640px) { .aiSummarySection { margin-bottom: 1rem; } }
 
-.aiSummaryHeader {
-  font-weight: 600; font-size: 0.875rem; line-height: 1.25rem;
-  color: #2A3F54; margin-bottom: 0.375rem; display: flex;
-  align-items: center; justify-content: space-between;
-}
+.aiSummaryHeader { font-weight: 600; font-size: 0.875rem; line-height: 1.25rem; color: #2A3F54; margin-bottom: 0.375rem; display: flex; align-items: center; justify-content: space-between; }
 @media (min-width: 640px) { .aiSummaryHeader { font-size: 1rem; line-height: 1.5rem; } }
 
 .aiSummaryHeaderText { display: flex; align-items: center; }
 .aiSummaryHeaderText svg { height: 1rem; width: 1rem; margin-right: 0.25rem; color: #EC4899; }
 @media (min-width: 640px) { .aiSummaryHeaderText svg { height: 1.25rem; width: 1.25rem; margin-right: 0.375rem; } }
 
-.generateButton {
-  background-color: #EC4899; color: white; font-size: 0.625rem; line-height: 0.75rem;
-  font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 9999px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: background-color 0.2s;
-  border: none; /* ボタンのデフォルトborderをリセット */
-  cursor: pointer;
-}
+.generateButton { background-color: #EC4899; color: white; font-size: 0.625rem; line-height: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 9999px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: background-color 0.2s; border: none; cursor: pointer; }
 .generateButton:hover { background-color: rgba(236, 72, 153, 0.8); }
 @media (min-width: 640px) { .generateButton { font-size: 0.75rem; line-height: 1rem; padding: 0.25rem 0.625rem; } }
 
-.aiSummaryText, .aiSummaryPlaceholder, .aiSummaryLoading {
-  font-size: 0.75rem; line-height: 1rem; color: #2A3F54; line-height: 1.6;
-}
+.aiSummaryText, .aiSummaryPlaceholder, .aiSummaryLoading { font-size: 0.75rem; line-height: 1rem; color: #2A3F54; line-height: 1.6; }
 @media (min-width: 640px) { .aiSummaryText, .aiSummaryPlaceholder, .aiSummaryLoading { font-size: 0.875rem; line-height: 1.25rem; } }
 .aiSummaryPlaceholder { color: rgba(42, 63, 84, 0.5); font-style: italic; }
 .aiSummaryLoading { color: rgba(42, 63, 84, 0.7); font-style: italic; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
@@ -204,164 +198,52 @@
 .abstractSection { margin-bottom: 0.75rem; }
 @media (min-width: 640px) { .abstractSection { margin-bottom: 1rem; } }
 
-.abstractSummary {
-  cursor: pointer; font-size: 0.75rem; line-height: 1rem; font-weight: 500;
-  color: rgba(42, 63, 84, 0.8); list-style: none; display: flex;
-  align-items: center; transition: color 0.2s;
-}
+.abstractSummary { cursor: pointer; font-size: 0.75rem; line-height: 1rem; font-weight: 500; color: rgba(42, 63, 84, 0.8); list-style: none; display: flex; align-items: center; transition: color 0.2s; }
 .abstractSummary:hover { color: #2A3F54; }
 .abstractSummary svg { height: 0.875rem; width: 0.875rem; margin-right: 0.25rem; transition: transform 0.2s; }
 .abstractSection[open] .abstractSummary svg { transform: rotate(90deg); }
-@media (min-width: 640px) {
-  .abstractSummary { font-size: 0.875rem; line-height: 1.25rem; }
-  .abstractSummary svg { height: 1rem; width: 1rem; }
-}
+@media (min-width: 640px) { .abstractSummary { font-size: 0.875rem; line-height: 1.25rem; } .abstractSummary svg { height: 1rem; width: 1rem; } }
 
-.abstractContent {
-  color: rgba(42, 63, 84, 0.9); margin-top: 0.375rem; font-size: 0.75rem; line-height: 1rem;
-  background-color: rgba(42, 63, 84, 0.05); padding: 0.625rem; border-radius: 0.375rem;
-  border: 1px solid rgba(42, 63, 84, 0.1); line-height: 1.6;
-}
+.abstractContent { color: rgba(42, 63, 84, 0.9); margin-top: 0.375rem; font-size: 0.75rem; line-height: 1rem; background-color: rgba(42, 63, 84, 0.05); padding: 0.625rem; border-radius: 0.375rem; border: 1px solid rgba(42, 63, 84, 0.1); line-height: 1.6; }
 @media (min-width: 640px) { .abstractContent { font-size: 0.875rem; line-height: 1.25rem; padding: 0.75rem; } }
 
 .categoriesContainer { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 1rem; }
 @media (min-width: 640px) { .categoriesContainer { margin-bottom: 1.5rem; } }
 
-.categoryTag {
-  background-color: rgba(42, 63, 84, 0.1); color: rgba(42, 63, 84, 0.8);
-  font-size: 0.625rem; line-height: 0.75rem; font-weight: 500; padding: 0.125rem 0.5rem;
-  border-radius: 9999px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
+.categoryTag { background-color: rgba(42, 63, 84, 0.1); color: rgba(42, 63, 84, 0.8); font-size: 0.625rem; line-height: 0.75rem; font-weight: 500; padding: 0.125rem 0.5rem; border-radius: 9999px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
 @media (min-width: 640px) { .categoryTag { font-size: 0.75rem; line-height: 1rem; padding: 0.25rem 0.625rem; } }
 
-.pdfButtonArea {
-  position: sticky; bottom: -1px; /* -1pxで親要素のpaddingにかからないようにするテクニック */
-  background-color: rgba(255, 255, 255, 0.9); /* 透明度少し上げる */
-  backdrop-filter: blur(4px);
-  padding-top: 0.625rem; padding-bottom: 0.625rem; /* 下にも少しパディング */
-  margin-top: auto; z-index: 20;
-  border-top: 1px solid rgba(42, 63, 84, 0.1);
-}
+.pdfButtonArea { position: sticky; bottom: -1px; background-color: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px); padding-top: 0.625rem; padding-bottom: 0.625rem; margin-top: auto; z-index: 20; border-top: 1px solid rgba(42, 63, 84, 0.1); }
 @media (min-width: 640px) { .pdfButtonArea { padding-top: 0.75rem; padding-bottom: 0.75rem; } }
 
 .pdfButtonContainer { display: flex; justify-content: center; }
-.pdfButton {
-  display: inline-flex; align-items: center; background-color: #2A3F54;
-  color: white; font-size: 0.75rem; line-height: 1rem; font-weight: 600;
-  padding: 0.375rem 0.75rem; border-radius: 9999px;
-  box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.15), 0px 2px 5px rgba(42, 63, 84, 0.1);
-  transition: background-color 0.2s, transform 0.2s;
-  border: none; cursor: pointer;
-}
+.pdfButton { display: inline-flex; align-items: center; background-color: #2A3F54; color: white; font-size: 0.75rem; line-height: 1rem; font-weight: 600; padding: 0.375rem 0.75rem; border-radius: 9999px; box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.15), 0px 2px 5px rgba(42, 63, 84, 0.1); transition: background-color 0.2s, transform 0.2s; border: none; cursor: pointer; }
 .pdfButton:hover { background-color: rgba(42, 63, 84, 0.8); transform: scale(1.05); }
 .pdfButton svg { height: 0.875rem; width: 0.875rem; margin-right: 0.25rem; }
-@media (min-width: 640px) {
-  .pdfButton { font-size: 0.875rem; line-height: 1.25rem; padding: 0.5rem 1rem; }
-  .pdfButton svg { height: 1rem; width: 1rem; margin-right: 0.375rem; }
-}
-.pdfPlaceholder { height: 1.875rem; } /* py-0.375 + line-height 1rem + py-0.375 */
-@media (min-width: 640px) { .pdfPlaceholder { height: 2.25rem; } } /* py-0.5 + line-height 1.25rem + py-0.5 */
+@media (min-width: 640px) { .pdfButton { font-size: 0.875rem; line-height: 1.25rem; padding: 0.5rem 1rem; } .pdfButton svg { height: 1rem; width: 1rem; margin-right: 0.375rem; } }
+.pdfPlaceholder { height: 1.875rem; }
+@media (min-width: 640px) { .pdfPlaceholder { height: 2.25rem; } }
 
-.loadingMoreIndicator {
-  position: fixed; bottom: 0.75rem; right: 0.75rem;
-  background-color: rgba(42, 63, 84, 0.8); color: white; font-size: 0.625rem;
-  padding: 0.125rem 0.5rem; border-radius: 9999px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
+.loadingMoreIndicator { position: fixed; bottom: 0.75rem; right: 0.75rem; background-color: rgba(42, 63, 84, 0.8); color: white; font-size: 0.625rem; padding: 0.125rem 0.5rem; border-radius: 9999px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 @media (min-width: 640px) { .loadingMoreIndicator { bottom: 1rem; right: 1rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; } }
 
-/* アニメーション (Tailwindのkeyframes/animationの代替) */
-@keyframes flyOutLeft {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(-120vw) translateY(-10vh) rotate(-35deg); opacity: 0; }
-}
-.animateFlyOutLeft {
-  animation: flyOutLeft 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
-}
+@keyframes flyOutLeft { 0% { transform: translateX(0) rotate(0deg); opacity: 1; } 100% { transform: translateX(-120vw) translateY(-10vh) rotate(-35deg); opacity: 0; } }
+.animateFlyOutLeft { animation: flyOutLeft 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; }
+@keyframes flyOutRight { 0% { transform: translateX(0) rotate(0deg); opacity: 1; } 100% { transform: translateX(120vw) translateY(-10vh) rotate(35deg); opacity: 0; } }
+.animateFlyOutRight { animation: flyOutRight 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; }
+@keyframes nextCardEnter { 0% { transform: scale(0.9) translateY(20px) rotate(0deg); opacity: 0.7; } 100% { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; } }
+.animateNextCardEnter { animation: nextCardEnter 0.4s ease-out forwards; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-@keyframes flyOutRight {
-  0% { transform: translateX(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateX(120vw) translateY(-10vh) rotate(35deg); opacity: 0; }
-}
-.animateFlyOutRight {
-  animation: flyOutRight 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
-}
-
-@keyframes nextCardEnter {
-  0% { transform: scale(0.9) translateY(20px) rotate(0deg); opacity: 0.7; }
-  100% { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; }
-}
-.animateNextCardEnter {
-  animation: nextCardEnter 0.4s ease-out forwards;
-}
-
-@keyframes pulse { /* for loading states */
-  0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
-}
-
-
-/* Loading Page States (中央のローディング) */
-.loadingStateContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 1.5rem; /* p-6 */
-  text-align: center;
-}
-.loadingStateBox {
-  background-color: rgba(255, 255, 255, 0.8); /* bg-white/80 */
-  backdrop-filter: blur(4px); /* backdrop-blur-sm */
-  padding: 2rem; /* p-8 */
-  border-radius: 1rem; /* rounded-2xl */
-  box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15); /* shadow-pop-lg */
-}
-@media (min-width: 640px) { /* sm */ .loadingStateBox { padding: 2.5rem; } } /* sm:p-10 */
-
-.loadingStateTitle {
-  font-size: 1.5rem; /* text-2xl */
-  /* pop-title は globals.css で定義 */
-  margin-bottom: 1rem; /* mb-4 */
-  color: #2A3F54; /* text-brand-primary */
-}
-@media (min-width: 640px) { /* sm */ .loadingStateTitle { font-size: 1.875rem; } } /* sm:text-3xl */
-@media (min-width: 768px) { /* md */ .loadingStateTitle { font-size: 2.25rem; } } /* md:text-4xl */
-
-.loadingSpinner {
-  animation: spin 1s linear infinite;
-  border-radius: 9999px; /* rounded-full */
-  height: 3rem; /* h-12 */
-  width: 3rem;
-  border-top-width: 4px;
-  border-bottom-width: 4px;
-  border-color: #2A3F54; /* border-brand-primary */
-  border-left-color: transparent; /* スピナーの見た目のため */
-  border-right-color: transparent;
-  margin-left: auto;
-  margin-right: auto;
-}
-@media (min-width: 640px) { /* sm */ .loadingSpinner { height: 4rem; width: 4rem; } } /* sm:h-16 sm:w-16 */
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.reloadButton {
-  margin-top: 1.5rem; /* mt-6 */
-  background-color: #2A3F54; /* bg-brand-primary */
-  color: white;
-  font-weight: 600; /* font-semibold */
-  padding: 0.625rem 1.5rem; /* py-2.5 px-6 */
-  border-radius: 9999px;
-  font-size: 0.875rem; /* text-sm */
-  transition: all 0.2s;
-  box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.15), 0px 2px 5px rgba(42, 63, 84, 0.1); /* shadow-pop-md */
-  /* focus, hover */
-}
+.loadingStateContainer { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 1.5rem; text-align: center; }
+.loadingStateBox { background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(4px); padding: 2rem; border-radius: 1rem; box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15); }
+@media (min-width: 640px) { .loadingStateBox { padding: 2.5rem; } }
+.loadingStateTitle { font-size: 1.5rem; margin-bottom: 1rem; color: #2A3F54; }
+@media (min-width: 640px) { .loadingStateTitle { font-size: 1.875rem; } }
+@media (min-width: 768px) { .loadingStateTitle { font-size: 2.25rem; } }
+.loadingSpinner { animation: spin 1s linear infinite; border-radius: 9999px; height: 3rem; width: 3rem; border-top-width: 4px; border-bottom-width: 4px; border-color: #2A3F54; border-left-color: transparent; border-right-color: transparent; margin-left: auto; margin-right: auto; }
+@media (min-width: 640px) { .loadingSpinner { height: 4rem; width: 4rem; } }
+.reloadButton { margin-top: 1.5rem; background-color: #2A3F54; color: white; font-weight: 600; padding: 0.625rem 1.5rem; border-radius: 9999px; font-size: 0.875rem; transition: all 0.2s; box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.15), 0px 2px 5px rgba(42, 63, 84, 0.1); border: none; cursor: pointer; }
 .reloadButton:hover { background-color: rgba(42, 63, 84, 0.8); transform: scale(1.05); }
-@media (min-width: 640px) { /* sm */
-  .reloadButton { padding: 0.75rem 2rem; font-size: 1rem; } /* sm:py-3 sm:px-8 sm:text-base */
-}
+@media (min-width: 640px) { .reloadButton { padding: 0.75rem 2rem; font-size: 1rem; } }
