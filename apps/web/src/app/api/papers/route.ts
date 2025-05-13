@@ -68,25 +68,27 @@ interface PaperSummary {
 
 // --- fast-xml-parser の設定 ---
 const parserOptions: Partial<X2jOptions> = {
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  // isArray: (name, jpath, isLeafNode, isAttribute) => { // fast-xml-parser v3 以前のシグネチャ
-  // fast-xml-parser v4 のシグネチャに合わせる (必要に応じてドキュメント確認)
-  isArray: (tagName: string, jPath: string, isNodeEmpty: boolean, isAttribute: boolean): boolean => {
-    // entry, author, link, category は配列として扱うことを保証する
-    // 注意: jPath の完全な正確性は XML 構造に依存するため、テストが必要
-    if (jPath === 'feed.entry' || jPath.endsWith('.entry.author') || jPath.endsWith('.entry.link') || jPath.endsWith('.entry.category')) {
-      return true;
-    }
-    // <feed> 直下の link も配列として扱う
-    if (jPath === 'feed.link') {
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    // isArray: (name, jpath, isLeafNode, isAttribute) => { // fast-xml-parser v3 以前のシグネチャ
+    // fast-xml-parser v4 のシグネチャに合わせる (必要に応じてドキュメント確認)
+    // ↓↓↓ 修正箇所 ↓↓↓
+    isArray: (tagName: string, jPath: string, _isNodeEmpty: boolean, _isAttribute: boolean): boolean => {
+      // entry, author, link, category は配列として扱うことを保証する
+      // 注意: jPath の完全な正確性は XML 構造に依存するため、テストが必要
+      if (jPath === 'feed.entry' || jPath.endsWith('.entry.author') || jPath.endsWith('.entry.link') || jPath.endsWith('.entry.category')) {
         return true;
-    }
-    return false; // デフォルトは false
-  },
-  parseAttributeValue: true, // 数値などを自動でパースする場合 true (今回はfalseのまま)
-  parseTagValue: true, // 数値などを自動でパースする場合 true (今回はfalseのまま)
-};
+      }
+      // <feed> 直下の link も配列として扱う
+      if (jPath === 'feed.link') {
+          return true;
+      }
+      return false; // デフォルトは false
+    },
+    // ↑↑↑ 修正箇所 ↑↑↑
+    parseAttributeValue: true,
+    parseTagValue: true,
+  };
 
 // --- 型ガード関数 (簡易版) ---
 // ArxivRawData型かどうかの最低限のチェック
