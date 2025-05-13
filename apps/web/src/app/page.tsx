@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import FormattedTextRenderer from '@/components/FormattedTextRenderer';
+import styles from './page.module.css';
+import { SparklesIcon, ChevronRightIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 interface Paper {
   id: string;
@@ -16,23 +18,19 @@ interface Paper {
   aiSummary?: string;
 }
 
-const SWIPE_THRESHOLD = 80;
-const SWIPE_MAX_ROTATION = 15;
-const SWIPE_TRANSLATE_X_SCALE = 1.2;
-const SWIPE_FEEDBACK_OPACITY = 'opacity-40';
-
-// カードスタックで表示する枚数 (トップ + 背景に見えるもの)
-const VISIBLE_CARDS_IN_STACK = 2; // トップカードと次のカード1枚
+const SWIPE_THRESHOLD = 70;
+const SWIPE_MAX_ROTATION = 12;
+const SWIPE_TRANSLATE_X_SCALE = 1.1;
+const VISIBLE_CARDS_IN_STACK = 2;
 
 export default function HomePage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [currentPaperIndex, setCurrentPaperIndex] = useState(0);
   const [likedPapers, setLikedPapers] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>('Kiga-ers へようこそ！論文を探しています...');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // 初期ローディング状態はtrue
   const [isSummarizing, setIsSummarizing] = useState(false);
 
-  // スワイプアニメーション用
   const [interactionState, setInteractionState] = useState<{
     isSwiping: boolean;
     cardTransform: string;
@@ -50,353 +48,235 @@ export default function HomePage() {
   const touchCurrentX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
+  const fetchPapers = useCallback(async (isInitialFetch = false) => {
+    console.log(`fetchPapers: Called (isInitialFetch: ${isInitialFetch})`);
+    if (!isInitialFetch && isLoading) { // 追加フェッチの場合、既にローディング中なら何もしない
+        console.log('fetchPapers: Already loading, skipping additional fetch.');
+        return;
+    }
 
-  const fetchPapers = useCallback(async () => {
     setIsLoading(true);
-    setMessage('新しい論文を探しています...');
+    if (isInitialFetch) {
+        setMessage('Kiga-ers へようこそ！論文を探しています...');
+    } else {
+        setMessage('新しい論文を探しています...');
+    }
     setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '', flyingDirection: null }));
+
     try {
       const response = await fetch('/api/papers');
+      console.log('fetchPapers: Response status', response.status);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('fetchPapers: API error', response.status, errorData);
         throw new Error(`論文データの取得に失敗しました。 Status: ${response.status}. ${errorData.error || ''}`);
       }
       const data: Paper[] = await response.json();
+      console.log('fetchPapers: Data received, length:', data.length);
+
       if (data && data.length > 0) {
-        setPapers(prevPapers => [...prevPapers, ...data.filter(p => !prevPapers.some(pp => pp.id === p.id))]); // 新しい論文を既存リストに追加（重複排除）
-        // setPapers(data); // 毎回新しいリストにする場合
-        if (currentPaperIndex >= papers.length && data.length > 0) { // もし現在のインデックスが範囲外ならリセット
-            setCurrentPaperIndex(0);
-        }
-        setMessage(null);
-      } else if (papers.length === 0) { // 初回ロードで何も取得できなかった場合
-        setPapers([]);
-        setMessage('表示できる論文が見つかりませんでした。後ほど再読み込みしてください。');
+        setPapers(prevPapers => {
+          const existingIds = new Set(prevPapers.map(p => p.id));
+          const newUniquePapers = data.filter(p => !existingIds.has(p.id));
+          console.log('fetchPapers: New unique papers to add:', newUniquePapers.length);
+          return [...prevPapers, ...newUniquePapers];
+        });
+        setMessage(null); // データ取得成功時はメッセージをクリア
+      } else {
+        // データが空だった場合
+        setPapers(prevPapers => {
+            if (prevPapers.length === 0) { // 既に表示中の論文もない場合
+                setMessage('表示できる論文が見つかりませんでした。後ほど再読み込みしてください。');
+            }
+            // 既に論文がある場合はメッセージは変更しない（Loading more...などが表示されているため）
+            return prevPapers;
+        });
       }
     } catch (error) {
-      console.error('Failed to fetch papers:', error);
-      setMessage(`論文の読み込みエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
-      if (papers.length === 0) setPapers([]);
+      console.error('fetchPapers: CATCH Error', error);
+      setPapers(prevPapers => { // エラー時も既存の論文は維持
+        if (prevPapers.length === 0) {
+            setMessage(`論文の読み込みエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
+        }
+        return prevPapers;
+      });
     } finally {
+      console.log('fetchPapers: FINALLY');
       setIsLoading(false);
     }
-  }, [currentPaperIndex, papers.length]); // papers.length を依存配列に追加
+  }, [isLoading]); // isLoading を依存配列に追加し、連続呼び出しを防ぐ
 
+  // 初回マウント時にデータをフェッチ
   useEffect(() => {
-    // 初回ロードまたは論文が少なくなったら追加ロード
-    if (papers.length === 0 || currentPaperIndex >= papers.length - VISIBLE_CARDS_IN_STACK) {
-        fetchPapers();
+    console.log('useEffect (Mount): Calling initial fetchPapers.');
+    fetchPapers(true); // isInitialFetch を true にして初回フェッチを明示
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 依存配列を空にすることでマウント時に一度だけ実行
+
+  // currentPaperIndex が変更されたときに、追加の論文が必要か判断してフェッチ
+  useEffect(() => {
+    console.log('useEffect (Index Change): papers.length:', papers.length, 'currentPaperIndex:', currentPaperIndex, 'isLoading:', isLoading);
+    if (papers.length > 0 && currentPaperIndex >= papers.length - VISIBLE_CARDS_IN_STACK && !isLoading) {
+      console.log('useEffect (Index Change): Condition met for fetching more papers.');
+      fetchPapers(false); // 追加フェッチ
     }
-  }, [fetchPapers, currentPaperIndex, papers.length]);
+  }, [currentPaperIndex, papers.length, isLoading, fetchPapers]);
 
 
+  // (generateAiSummary, resetCardInteraction, goToNextPaper, handleSwipeAction, handleTouchStart, handleTouchMove, handleTouchEnd のロジックは変更なし)
   const generateAiSummary = useCallback(async (paperId: string, textToSummarize: string) => {
-    // (generateAiSummary の中身は変更なし)
     if (!textToSummarize || isSummarizing) return;
     setIsSummarizing(true);
     try {
-      const response = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ textToSummarize }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`要約の生成に失敗しました。 Status: ${response.status}. ${errorData.error || ''}`);
-      }
+      const response = await fetch('/api/summarize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ textToSummarize }), });
+      if (!response.ok) { const errorData = await response.json().catch(() => ({})); throw new Error(`要約の生成に失敗しました。 Status: ${response.status}. ${errorData.error || ''}`); }
       const data = await response.json();
-      setPapers(prevPapers =>
-        prevPapers.map(paper =>
-          paper.id === paperId ? { ...paper, aiSummary: data.summary } : paper
-        )
-      );
-    } catch (error) {
-      console.error('Failed to generate summary:', error);
-      alert(`要約生成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
-    } finally {
-      setIsSummarizing(false);
-    }
+      setPapers(prevPapers => prevPapers.map(p => p.id === paperId ? { ...p, aiSummary: data.summary } : p));
+    } catch (error) { console.error('Failed to generate summary:', error); alert(`要約生成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`); }
+    finally { setIsSummarizing(false); }
   }, [isSummarizing]);
 
   const resetCardInteraction = () => {
-    setInteractionState(prev => ({
-        ...prev,
-        isSwiping: false,
-        cardTransform: '',
-        feedbackColor: '',
-    }));
-    touchStartX.current = null;
-    touchCurrentX.current = null;
-    touchStartY.current = null;
+    setInteractionState(prev => ({ ...prev, isSwiping: false, cardTransform: '', feedbackColor: '' }));
+    touchStartX.current = null; touchCurrentX.current = null; touchStartY.current = null;
   };
 
   const goToNextPaper = useCallback(() => {
     setCurrentPaperIndex(prevIndex => prevIndex + 1);
-    // アニメーション終了後に flyingDirection をリセット
-    // fetchPapers は useEffect で currentPaperIndex の変更を検知して呼ばれる
-    setTimeout(() => {
-        setInteractionState(prev => ({ ...prev, flyingDirection: null, cardTransform: '' }));
-    }, 100); // アニメーションクラスが外れる猶予
+    setTimeout(() => { setInteractionState(prev => ({ ...prev, flyingDirection: null, cardTransform: '' })); }, 100);
   }, []);
-
 
   const handleSwipeAction = useCallback((direction: 'left' | 'right') => {
     const paperToRate = papers[currentPaperIndex];
     if (!paperToRate) return;
-
     if (direction === 'right') {
-      console.log(`いいね: ${paperToRate.title} (ID: ${paperToRate.id})`);
       setLikedPapers(prev => prev.includes(paperToRate.id) ? prev : [...prev, paperToRate.id]);
-      setInteractionState(prev => ({ ...prev, flyingDirection: 'right', feedbackColor: 'bg-brand-accent-pink' }));
+      setInteractionState(prev => ({ ...prev, flyingDirection: 'right', feedbackColor: styles.feedbackPink }));
     } else {
-      console.log(`興味なし: ${paperToRate.title} (ID: ${paperToRate.id})`);
-      setInteractionState(prev => ({ ...prev, flyingDirection: 'left', feedbackColor: 'bg-brand-accent-lime' }));
+      setInteractionState(prev => ({ ...prev, flyingDirection: 'left', feedbackColor: styles.feedbackLime }));
     }
-
-    // アニメーションの時間はCSSで定義 (0.6s)
-    setTimeout(() => {
-        goToNextPaper();
-    }, 600);
+    setTimeout(() => { goToNextPaper(); }, 600);
   }, [papers, currentPaperIndex, goToNextPaper]);
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => { if (!e.touches[0] || interactionState.flyingDirection) return; resetCardInteraction(); touchStartX.current = e.touches[0].clientX; touchCurrentX.current = e.touches[0].clientX; touchStartY.current = e.touches[0].clientY; setInteractionState(prev => ({...prev, isSwiping: true })); };
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => { if (touchStartX.current === null || !e.touches[0] || touchStartY.current === null || !topCardRef.current || interactionState.flyingDirection) return; const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; touchCurrentX.current = currentX; const diffX = currentX - touchStartX.current; const diffY = Math.abs(currentY - touchStartY.current); if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) { if(interactionState.isSwiping) resetCardInteraction(); return; } const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION; const translateX = diffX * SWIPE_TRANSLATE_X_SCALE; setInteractionState(prev => ({ ...prev, cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`, feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD / 2 ? (diffX > 0 ? styles.feedbackPink : styles.feedbackLime) : '' })); };
+  const handleTouchEnd = () => { if (touchStartX.current === null || touchCurrentX.current === null || !interactionState.isSwiping || interactionState.flyingDirection) { if (interactionState.isSwiping && !interactionState.flyingDirection) resetCardInteraction(); return; } const diffX = touchCurrentX.current - touchStartX.current; if (Math.abs(diffX) > SWIPE_THRESHOLD) { handleSwipeAction(diffX > 0 ? 'right' : 'left'); } else { resetCardInteraction(); } setInteractionState(prev => ({...prev, isSwiping: false })); };
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!e.touches[0] || interactionState.flyingDirection) return;
-    resetCardInteraction();
-    touchStartX.current = e.touches[0].clientX;
-    touchCurrentX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    setInteractionState(prev => ({...prev, isSwiping: true }));
-  };
 
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartX.current === null || !e.touches[0] || touchStartY.current === null || !topCardRef.current || interactionState.flyingDirection) return;
-
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
-    touchCurrentX.current = currentX;
-    const diffX = currentX - touchStartX.current;
-    const diffY = Math.abs(currentY - touchStartY.current);
-
-    if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) {
-        if(interactionState.isSwiping) resetCardInteraction();
-        return;
-    }
-    
-    const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION;
-    const translateX = diffX * SWIPE_TRANSLATE_X_SCALE;
-    setInteractionState(prev => ({
-        ...prev,
-        cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`,
-        feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD / 3 
-                        ? (diffX > 0 ? 'bg-brand-accent-pink' : 'bg-brand-accent-lime') 
-                        : ''
-    }));
-  };
-
-  const handleTouchEnd = () => {
-    if (touchStartX.current === null || touchCurrentX.current === null || !interactionState.isSwiping || interactionState.flyingDirection) {
-      if (interactionState.isSwiping && !interactionState.flyingDirection) resetCardInteraction();
-      return;
-    }
-    const diffX = touchCurrentX.current - touchStartX.current;
-    if (Math.abs(diffX) > SWIPE_THRESHOLD) {
-      handleSwipeAction(diffX > 0 ? 'right' : 'left');
-    } else {
-      resetCardInteraction();
-    }
-    setInteractionState(prev => ({...prev, isSwiping: false }));
-  };
-
-  // 表示する論文のリストを準備 (スタック用)
   const papersInStack = papers.slice(currentPaperIndex, currentPaperIndex + VISIBLE_CARDS_IN_STACK);
-  if (isLoading && papersInStack.length === 0 && papers.length === 0) {
+  console.log('Render - isLoading:', isLoading, 'papers.length:', papers.length, 'papersInStack.length:', papersInStack.length, 'currentPaperIndex:', currentPaperIndex, 'message:', message);
+
+  if (isLoading && papers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-        <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-pop-lg">
-          <h1 className="text-3xl md:text-4xl pop-title mb-3 text-brand-primary">{message || "読み込み中..."}</h1>
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-brand-primary mx-auto"></div>
+      <div className={styles.loadingStateContainer}>
+        <div className={styles.loadingStateBox}>
+          <h1 className={`${styles.loadingStateTitle} pop-title`}>{message}</h1>
+          <div className={styles.loadingSpinner}></div>
         </div>
       </div>
     );
   }
 
-  if (!isLoading && papersInStack.length === 0) {
+  if (!isLoading && papers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-        <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-pop-lg">
-          <h1 className="text-3xl md:text-4xl pop-title mb-3 text-brand-primary">{message || "表示できる論文がありません。"}</h1>
-          <button
-            onClick={fetchPapers}
-            className="mt-6 bg-brand-primary hover:bg-opacity-80 text-white font-semibold py-3 px-8 rounded-full transition-all duration-200 shadow-pop-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-opacity-50 transform hover:scale-105"
-          >
-            再読み込み
-          </button>
+      <div className={styles.loadingStateContainer}>
+        <div className={styles.loadingStateBox}>
+          <h1 className={`${styles.loadingStateTitle} pop-title`}>{message || "表示できる論文がありません。"}</h1>
+          <button onClick={() => fetchPapers(true)} className={styles.reloadButton}> 再読み込み </button>
         </div>
       </div>
     );
   }
-
+  
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden select-none" style={{ touchAction: 'pan-y' }}>
-      <header className="my-6 text-center">
-        <h1 className="text-4xl md:text-5xl pop-title text-brand-primary drop-shadow-sm">
-          Kiga-ers
-        </h1>
-        <p className="text-sm text-brand-primary/80 mt-1">
-          気になる論文をスワイプ！ いいねした論文: {likedPapers.length}件
-        </p>
+    <div className={styles.pageContainer}>
+      <header className={styles.header}>
+        <h1 className={`${styles.title} pop-title`}>Kiga-ers</h1>
+        <p className={styles.subtitle}>いいねした論文: {likedPapers.length}件</p>
       </header>
 
-      <main className="relative w-full max-w-xl h-[70vh] flex items-center justify-center">
-        {papersInStack.reverse().map((paper, indexInVisibleStack_reversed) => {
-          const indexInStack = (VISIBLE_CARDS_IN_STACK - 1) - indexInVisibleStack_reversed; // 0がトップ、1が次
-          const isTopCard = indexInStack === 0;
-
-          // ↓↓↓ 修正箇所: let を const に変更 ↓↓↓
-          const cardDynamicStyle: React.CSSProperties = {};
-          // ↑↑↑ 修正箇所 ↑↑↑
-          let animationClass = ''; // animationClass は再代入の可能性があるので let のまま
-
-          if (isTopCard) {
-            // cardDynamicStyle.transform = interactionState.cardTransform; // この行はコメントアウトまたは修正が必要
-                                                                       // React.CSSProperties型に直接代入はできない
-                                                                       // 正しくは以下のようにプロパティごとに行う
-            if (interactionState.cardTransform) { // transform がある場合のみ設定
-                cardDynamicStyle.transform = interactionState.cardTransform;
+      <main className={styles.mainContentArea}>
+        {papersInStack.length > 0 ? (
+            papersInStack.slice().reverse().map((paper, indexInVisibleStack_reversed) => {
+            const indexInStack = (VISIBLE_CARDS_IN_STACK - 1) - indexInVisibleStack_reversed;
+            const isTopCard = indexInStack === 0;
+            const cardDynamicStyles: React.CSSProperties = {};
+            let animationClass = '';
+            if (isTopCard) {
+                cardDynamicStyles.transform = interactionState.cardTransform;
+                if (interactionState.flyingDirection === 'left') animationClass = styles.animateFlyOutLeft || '';
+                if (interactionState.flyingDirection === 'right') animationClass = styles.animateFlyOutRight || '';
+            } else {
+                if (!interactionState.flyingDirection) {
+                    cardDynamicStyles.transform = `scale(${1 - (indexInStack * 0.04)}) translateY(${indexInStack * 8}px) rotate(${indexInStack * (indexInStack % 2 === 0 ? -1:1) * 1}deg)`;
+                    cardDynamicStyles.opacity = 1 - (indexInStack * 0.4);
+                } else if (indexInStack === 1) {
+                    animationClass = styles.animateNextCardEnter || '';
+                }
             }
-            if (interactionState.flyingDirection === 'left') animationClass = 'animate-flyOutLeft';
-            if (interactionState.flyingDirection === 'right') animationClass = 'animate-flyOutRight';
-          } else {
-            if (!interactionState.flyingDirection) {
-                cardDynamicStyle.transform = `scale(${1 - (indexInStack * 0.05)}) translateY(${indexInStack * 10}px) rotate(${indexInStack * (indexInStack % 2 === 0 ? -1:1) * 1.5}deg)`;
-                cardDynamicStyle.opacity = 1 - (indexInStack * 0.3);
-            } else if (indexInStack === 1) {
-                animationClass = 'animate-nextCardEnter';
-            }
-          }
-          
-          return (
-            <div
-              key={paper.id + (isTopCard ? '-top' : '-next')}
-              ref={isTopCard ? topCardRef : null}
-              className={`absolute bg-brand-card-bg rounded-2xl shadow-pop-lg p-6 w-full text-left border border-brand-primary/10 h-full flex flex-col
-                          cursor-grab ${isTopCard && interactionState.isSwiping ? 'active:cursor-grabbing' : ''}
-                          ${animationClass}
-                          transition-transform duration-300 ease-out ${interactionState.isSwiping && isTopCard ? '!duration-[0s]' : ''}
-                        `}
-              style={{
-                zIndex: VISIBLE_CARDS_IN_STACK - indexInStack,
-                touchAction: isTopCard ? 'none' : 'auto', // トップカードのみスワイプ操作をハンドル
-                ...cardDynamicStyle,
-              }}
-              onTouchStart={isTopCard ? handleTouchStart : undefined}
-              onTouchMove={isTopCard ? handleTouchMove : undefined}
-              onTouchEnd={isTopCard ? handleTouchEnd : undefined}
-              onTouchCancel={isTopCard ? handleTouchEnd : undefined}
-            >
-              {/* スワイプ時の色フィードバック用オーバーレイ */}
-              {isTopCard && interactionState.isSwiping && interactionState.feedbackColor && (
-                <div className={`absolute inset-0 rounded-2xl ${interactionState.feedbackColor} ${SWIPE_FEEDBACK_OPACITY} z-0`}></div>
-              )}
+            let cardClasses = styles.card;
+            if (isTopCard && interactionState.isSwiping) cardClasses += ` ${styles.activeGrab}`;
+            if (animationClass) cardClasses += ` ${animationClass}`;
+            if (interactionState.isSwiping && isTopCard) cardClasses += ` ${styles.isSwiping}`;
 
-              <div className="relative z-10 flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-brand-primary/30 scrollbar-track-transparent" style={{ touchAction: 'pan-y' }}>
-                <h2 className="text-xl lg:text-2xl font-semibold mb-3 text-brand-primary leading-tight sticky top-0 bg-brand-card-bg/80 backdrop-blur-sm pt-2 pb-1 z-20">
-                  <FormattedTextRenderer text={paper.title} />
-                </h2>
-                <p className="text-sm text-brand-primary/70 mb-3 italic">
-                  Authors: {paper.authors.join(', ')}
-                </p>
-                <div className="text-xs text-brand-primary/50 mb-4 space-x-2">
-                  <span>Published: {new Date(paper.published).toLocaleDateString()}</span> /
-                  <span>Updated: {new Date(paper.updated).toLocaleDateString()}</span>
-                </div>
-
-                {/* AI Summary Section */}
-                <div className="mb-5 p-4 bg-brand-primary/5 rounded-lg border border-brand-primary/10">
-                  <h3 className="font-semibold text-brand-primary mb-2 flex items-center justify-between">
-                    <span className="flex items-center">
-                      <SparklesIcon className="h-5 w-5 mr-1.5 text-brand-accent-pink" />
-                      AIによる要約
-                    </span>
-                    {!paper.aiSummary && !isSummarizing && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); generateAiSummary(paper.id, paper.summary); }}
-                        className="bg-brand-accent-pink hover:bg-opacity-80 text-white text-xs font-bold py-1 px-3 rounded-full shadow-sm focus:outline-none focus:ring-2 ring-brand-accent-pink ring-opacity-50 transform hover:scale-105"
-                      >
-                        生成
-                      </button>
+            return (
+                <div key={paper.id + (isTopCard ? '-top' : '-next')} ref={isTopCard ? topCardRef : null} className={cardClasses}
+                    style={{ zIndex: VISIBLE_CARDS_IN_STACK - indexInStack, touchAction: isTopCard ? 'none' : 'auto', ...cardDynamicStyles }}
+                    onTouchStart={isTopCard ? handleTouchStart : undefined} onTouchMove={isTopCard ? handleTouchMove : undefined}
+                    onTouchEnd={isTopCard ? handleTouchEnd : undefined} onTouchCancel={isTopCard ? handleTouchEnd : undefined}
+                >
+                    {isTopCard && interactionState.isSwiping && interactionState.feedbackColor && (
+                        <div className={`${styles.swipeFeedbackOverlay} ${interactionState.feedbackColor}`}></div>
                     )}
-                  </h3>
-                  {isSummarizing && papers[currentPaperIndex]?.id === paper.id ? (
-                    <p className="text-sm text-brand-primary/70 italic animate-pulse">AIが要約を生成中です...</p>
-                  ) : paper.aiSummary ? (
-                    <p className="text-sm text-brand-primary leading-relaxed"><FormattedTextRenderer text={paper.aiSummary} /></p>
-                  ) : (
-                    <p className="text-sm text-brand-primary/50 italic">（AI要約を生成しますか？）</p>
-                  )}
+                    <div className={`${styles.cardScrollableContent} thin-scrollbar`}>
+                        <h2 className={styles.cardTitle}><FormattedTextRenderer text={paper.title} /></h2>
+                        <p className={styles.cardAuthors}>Authors: {paper.authors.join(', ')}</p>
+                        <div className={styles.cardDates}>
+                            <span>Published: {new Date(paper.published).toLocaleDateString()}</span>
+                            <span>Updated: {new Date(paper.updated).toLocaleDateString()}</span>
+                        </div>
+                        <div className={styles.aiSummarySection}>
+                            <h3 className={styles.aiSummaryHeader}>
+                                <span className={styles.aiSummaryHeaderText}><SparklesIcon />AIによる要約</span>
+                                {!paper.aiSummary && !isSummarizing && (
+                                    <button onClick={(e) => { e.stopPropagation(); generateAiSummary(paper.id, paper.summary); }} className={styles.generateButton}>生成</button>
+                                )}
+                            </h3>
+                            {isSummarizing && currentPaperIndex < papers.length && papers[currentPaperIndex]?.id === paper.id ? (
+                                <p className={styles.aiSummaryLoading}>AIが要約を生成中です...</p>
+                            ) : paper.aiSummary ? (
+                                <p className={styles.aiSummaryText}><FormattedTextRenderer text={paper.aiSummary} /></p>
+                            ) : (
+                                <p className={styles.aiSummaryPlaceholder}>（AI要約を生成しますか？）</p>
+                            )}
+                        </div>
+                        <details className={styles.abstractSection} onClick={(e) => e.stopPropagation()}>
+                            <summary className={styles.abstractSummary}><ChevronRightIcon />元のAbstractを見る</summary>
+                            <div className={styles.abstractContent}><FormattedTextRenderer text={paper.summary} /></div>
+                        </details>
+                        <div className={styles.categoriesContainer}>
+                            {paper.categories.map(category => (<span key={category} className={styles.categoryTag}>{category}</span>))}
+                        </div>
+                    </div>
+                    <div className={styles.pdfButtonArea}>
+                        <div className={styles.pdfButtonContainer}>
+                            {paper.pdfLink ? (
+                                <a href={paper.pdfLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={styles.pdfButton}><ArrowDownTrayIcon />PDFを開く</a>
+                            ) : <div className={styles.pdfPlaceholder}></div>}
+                        </div>
+                    </div>
                 </div>
-
-                {/* Original Abstract Section */}
-                <details className="mb-5 group" onClick={(e) => e.stopPropagation()}>
-                  <summary className="cursor-pointer text-sm font-medium text-brand-primary/80 hover:text-brand-primary list-none flex items-center">
-                    <ChevronRightIcon className="h-4 w-4 group-open:rotate-90 transform transition-transform duration-200 mr-1" />
-                    元のAbstractを見る
-                  </summary>
-                  <div className="text-brand-primary/90 mt-2 text-sm bg-brand-primary/5 p-3 rounded-md border border-brand-primary/10 leading-relaxed">
-                    <FormattedTextRenderer text={paper.summary} />
-                  </div>
-                </details>
-
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {paper.categories.map(category => (
-                    <span key={category} className="bg-brand-primary/10 text-brand-primary/80 text-xs font-medium px-3 py-1 rounded-full shadow-sm">
-                      {category}
-                    </span>
-                  ))}
-                </div>
-              </div> {/* End scrollable content */}
-
-              {/* PDF Link - カード下部に配置 */}
-              <div className="sticky bottom-0 bg-brand-card-bg/80 backdrop-blur-sm pt-3 pb-1 mt-auto z-20 border-t border-brand-primary/10">
-                <div className="flex justify-center">
-                  {paper.pdfLink ? (
-                    <a
-                      href={paper.pdfLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center bg-brand-primary hover:bg-opacity-80 text-white text-sm font-semibold py-2 px-5 rounded-full shadow-pop-md focus:outline-none focus:ring-2 ring-brand-primary ring-opacity-50 transform hover:scale-105"
-                    >
-                      <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
-                      PDFを開く
-                    </a>
-                  ) : <div className="h-9"></div> /* 高さを合わせるためのプレースホルダー */}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+            );
+            })
+        ) : (
+          !isLoading && <p className={styles.loadingStateTitle}>全ての論文を見終わりました。再読み込みしてください。</p>
+        )}
       </main>
-      {/* ローディングインジケータ (スワイプ中など軽微なもの) */}
-      {isLoading && papersInStack.length > 0 && (
-          <div className="fixed bottom-5 right-5 bg-brand-primary/80 text-white text-xs px-3 py-1 rounded-full shadow-md animate-pulse">
+      {isLoading && papers.length > 0 && (
+          <div className={styles.loadingMoreIndicator}>
               Loading more...
           </div>
       )}
     </div>
   );
 }
-
-// アイコンコンポーネントの例 (heroiconsなどからインポート)
-// npm install @heroicons/react または yarn add @heroicons/react
-// import { SparklesIcon, ChevronRightIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'; // or solid
-const SparklesIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L1.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.25 12L17 14.25l-1.25-2.25L13.75 12l2.008-.75L17 9.75l1.25 1.5L20.25 12l-2.008.75z" /></svg>
-);
-const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
-);
-const ArrowDownTrayIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-);

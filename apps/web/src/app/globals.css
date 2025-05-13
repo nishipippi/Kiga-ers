@@ -1,16 +1,92 @@
 /* apps/web/src/app/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-body {
-  @apply bg-brand-bg text-brand-primary; /* カスタムカラー適用 */
-  overflow: hidden; /* ページ全体のスクロールは引き続き禁止 */
-  overscroll-behavior-y: contain;
+/* 基本的なリセット (必要に応じてより詳細なリセットCSSを導入) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* 見出しなどに少しポップな印象を与える共通スタイル (任意) */
+html {
+  font-size: 16px; /* ベースフォントサイズ */
+}
+
+body {
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  background-color: #A9CADB; /* ロゴの背景色 (旧 'brand-bg') */
+  color: #2A3F54;          /* ロゴの濃い紺色 (旧 'brand-primary') */
+  overflow: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* グローバルなリンクスタイルなど */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* アプリケーション全体のコンテナなど、必要に応じて */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between; /* ヘッダーとメインコンテンツを配置 */
+  min-height: 100vh;
+  padding: 1rem; /* モバイル用ベースパディング */
+  overflow: hidden;
+  user-select: none; /* select-none */
+}
+
+@media (min-width: 640px) { /* sm */
+  .app-container {
+    padding: 1.5rem;
+  }
+}
+@media (min-width: 768px) { /* md */
+  .app-container {
+    padding: 2rem;
+  }
+}
+
+
+/* ポップな見出し用の共通クラス (Tailwindの .pop-title の代替) */
 .pop-title {
-  @apply font-bold tracking-tight text-shadow-sm; /* text-shadowはカスタムプラグインか疑似要素で */
-  /* text-shadow: 1px 1px 2px rgba(42, 63, 84, 0.2); */
+  font-weight: 700; /* font-bold */
+  letter-spacing: -0.025em; /* tracking-tight */
+  /* text-shadow: 1px 1px 2px rgba(42, 63, 84, 0.2); /* 必要であれば */
+}
+
+/* スクロールバーのスタイル (Tailwind Scrollbar Plugin の代替) */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(42, 63, 84, 0.3); /* brand-primary/30 */
+  border-radius: 4px;
+}
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(42, 63, 84, 0.3) transparent;
+}
+
+/* その他、全体で使うユーティリティ的なスタイルがあればここに記述 */
+.sr-only { /* スクリーンリーダー用 */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
