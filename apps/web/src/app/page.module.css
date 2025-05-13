@@ -1,13 +1,11 @@
 /* apps/web/src/app/page.module.css */
 
-.pageContainer { /* globals.css の .app-container とほぼ同じ役割 */
+.pageContainer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between; /* ヘッダー、メイン、フッター（ローディングインジケータ）を配置 */
-  min-height: 100vh;
+  min-height: 100vh; /* 画面の高さいっぱいに広がる */
   padding: 0.75rem; /* p-3 */
-  overflow: hidden;
   user-select: none;
 }
 @media (min-width: 640px) { /* sm */
@@ -22,68 +20,56 @@
 }
 
 .header {
-  margin-top: 1rem; /* my-4 */
-  margin-bottom: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem; /* カードとのスペースを少し確保 */
   text-align: center;
   width: 100%;
-  padding-left: 0.5rem; /* px-2 */
+  padding-left: 0.5rem;
   padding-right: 0.5rem;
+  flex-shrink: 0;
 }
 @media (min-width: 640px) { /* sm */
   .header {
-    margin-top: 1.5rem; /* sm:my-6 */
-    margin-bottom: 1.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 2rem;
   }
 }
 
-.title { /* h1 Kiga-ers */
+.title {
   font-size: 1.875rem; /* text-3xl */
   line-height: 2.25rem;
-  /* pop-title は globals.css で定義済み */
-  color: #2A3F54; /* brand-primary */
-  /* text-shadow for drop-shadow-sm (簡易版) */
+  color: #2A3F54;
   text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-@media (min-width: 640px) { /* sm */
-  .title {
-    font-size: 2.25rem; /* sm:text-4xl */
-    line-height: 2.5rem;
-  }
-}
-@media (min-width: 768px) { /* md */
-  .title {
-    font-size: 3rem; /* md:text-5xl */
-    line-height: 1;
-  }
-}
+@media (min-width: 640px) { /* sm */ .title { font-size: 2.25rem; line-height: 2.5rem; } }
+@media (min-width: 768px) { /* md */ .title { font-size: 3rem; line-height: 1; } }
 
-.subtitle { /* いいねした論文数 */
+.subtitle {
   font-size: 0.75rem; /* text-xs */
   line-height: 1rem;
-  color: rgba(42, 63, 84, 0.7); /* brand-primary/70 */
-  margin-top: 0.25rem; /* mt-1 */
+  color: rgba(42, 63, 84, 0.7);
+  margin-top: 0.25rem;
 }
-@media (min-width: 640px) { /* sm */
-  .subtitle {
-    font-size: 0.875rem; /* sm:text-sm */
-    line-height: 1.25rem;
-  }
-}
+@media (min-width: 640px) { /* sm */ .subtitle { font-size: 0.875rem; line-height: 1.25rem; } }
 
 .mainContentArea {
   position: relative;
   width: 100%;
-  max-width: 32rem; /* max-w-lg (tailwind.config.tsのmax-w-xlは36remなので注意) */
-  height: 65vh;
-  flex-grow: 1;
+  max-width: 32rem; /* max-w-lg */
+  /* カードの高さは内容に依存させるが、スタック表示のためある程度の高さを確保 */
+  /* このエリア自体はカードを中央に配置するためのコンテナ */
+  min-height: 60vh; /* カードが最低これくらいの高さに表示されるように */
+  flex-grow: 1; /* ヘッダー以外の残りのスペースを埋める */
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: auto; /* 親がflex-col justify-betweenなので、これで中央に */
+  padding-top: 1rem; /* カード上部のマージン */
+  padding-bottom: 3rem; /* カード下部のマージン (スクロールで見切れないように) */
 }
 @media (min-width: 640px) { /* sm */
   .mainContentArea {
-    height: 70vh;
+    min-height: 65vh;
+    padding-bottom: 4rem;
   }
 }
 @media (min-width: 1280px) { /* xl */
@@ -92,300 +78,198 @@
   }
 }
 
-
 /* --- カードスタックとカード自体のスタイル --- */
 .card {
-  position: absolute;
-  background-color: #FFFFFF; /* brand-card-bg */
-  border-radius: 0.75rem; /* rounded-xl */
-  box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15); /* shadow-pop-lg */
-  padding: 1rem; /* p-4 */
-  width: 90vw;
-  max-width: 100%; /* 親の max-w を超えないように */
+  position: absolute; /* スタックのためにabsolute */
+  background-color: #FFFFFF;
+  border-radius: 0.75rem;
+  box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15);
+  padding: 1rem;
+  width: 90vw; /* モバイルでの幅 */
+  max-width: 100%; /* 親コンテナの幅を超えない */
   text-align: left;
-  border: 1px solid rgba(42, 63, 84, 0.1); /* border border-brand-primary/10 */
-  height: 100%;
+  border: 1px solid rgba(42, 63, 84, 0.1);
   display: flex;
   flex-direction: column;
   cursor: grab;
-  transition-property: transform, background-color;
+  transition-property: transform, background-color, opacity; /* opacityも追加 */
   transition-duration: 0.3s;
   transition-timing-function: ease-out;
+  /* カードの高さは内容に依存させつつ、最大値を設ける */
+  max-height: 80vh; /* ビューポートの80%を最大高さとする */
+  /*  min-height: 350px; /* あまりに内容が少ない場合でも最低この高さは維持 */
 }
-.card.isSwiping { /* isSwiping && isTopCard ? '!duration-[0s]' */
+.card.isSwiping {
   transition-duration: 0s !important;
 }
-.card.activeGrab { /* isTopCard && interactionState.isSwiping ? 'active:cursor-grabbing' */
+.card.activeGrab {
   cursor: grabbing;
 }
 
 @media (min-width: 640px) { /* sm */
   .card {
-    border-radius: 1rem; /* sm:rounded-2xl */
-    padding: 1.25rem; /* sm:p-5 */
-    width: 100%; /* sm:w-full */
+    border-radius: 1rem;
+    padding: 1.25rem;
+    width: 100%; /* PCでは親コンテナ幅いっぱい */
+    /* max-height: 75vh; */
+    /* min-height: 400px; */
   }
 }
 @media (min-width: 768px) { /* md */
   .card {
-    padding: 1.5rem; /* md:p-6 */
+    padding: 1.5rem;
   }
 }
 
 .swipeFeedbackOverlay {
   position: absolute;
   inset: 0;
-  border-radius: inherit; /* 親の角丸を継承 */
-  opacity: 0.4; /* SWIPE_FEEDBACK_OPACITY */
+  border-radius: inherit;
+  opacity: 0.3; /* Tailwindでは opacity-40 だったので少し調整 */
   z-index: 0;
+  pointer-events: none; /* 下の要素の操作を妨げないように */
 }
-/* 色はJSX側でインラインスタイルか、クラスで動的に付与 */
-.feedbackPink { background-color: #EC4899; } /* brand-accent-pink */
-.feedbackLime { background-color: #84CC16; } /* brand-accent-lime */
-
+.feedbackPink { background-color: #EC4899; }
+.feedbackLime { background-color: #84CC16; }
 
 .cardScrollableContent {
   position: relative;
   z-index: 10;
-  flex-grow: 1;
-  overflow-y: auto;
-  /* thin-scrollbar は globals.cssで定義済み */
-  touch-action: pan-y; /* カード内は縦スクロール許可 */
+  flex-grow: 1; /* 利用可能な高さを埋める */
+  overflow-y: auto; /* 内容がカードの高さを超えたらスクロール */
+  touch-action: pan-y;
+  /* globals.css の .thin-scrollbar を適用 */
 }
 
 .cardTitle {
-  font-size: 1rem; /* text-base */
-  line-height: 1.5rem;
-  font-weight: 600; /* font-semibold */
-  margin-bottom: 0.5rem; /* mb-2 */
-  color: #2A3F54; /* text-brand-primary */
-  position: sticky;
-  top: 0;
-  background-color: rgba(255, 255, 255, 0.8); /* bg-brand-card-bg/80 */
-  backdrop-filter: blur(4px); /* backdrop-blur-sm */
-  padding-top: 0.5rem; /* pt-2 */
-  padding-bottom: 0.375rem; /* pb-1.5 */
-  z-index: 20; /* z-20 */
+  font-size: 1rem; line-height: 1.5rem;
+  font-weight: 600; margin-bottom: 0.5rem;
+  color: #2A3F54; position: sticky; top: 0;
+  background-color: rgba(255, 255, 255, 0.9); /* 透明度少し上げる */
+  backdrop-filter: blur(4px);
+  padding-top: 0.5rem; padding-bottom: 0.375rem;
+  z-index: 20;
 }
-@media (min-width: 640px) { /* sm */ .cardTitle { font-size: 1.125rem; line-height: 1.75rem; } } /* sm:text-lg */
-@media (min-width: 768px) { /* md */ .cardTitle { font-size: 1.25rem; line-height: 1.75rem; } } /* md:text-xl */
+@media (min-width: 640px) { .cardTitle { font-size: 1.125rem; line-height: 1.75rem; } }
+@media (min-width: 768px) { .cardTitle { font-size: 1.25rem; line-height: 1.75rem; } }
 
 .cardAuthors {
-  font-size: 0.75rem; line-height: 1rem; /* text-xs */
-  color: rgba(42, 63, 84, 0.7); /* text-brand-primary/70 */
-  margin-bottom: 0.5rem; /* mb-2 */
-  font-style: italic;
+  font-size: 0.75rem; line-height: 1rem;
+  color: rgba(42, 63, 84, 0.7); margin-bottom: 0.5rem; font-style: italic;
 }
-@media (min-width: 640px) { /* sm */ .cardAuthors { font-size: 0.875rem; line-height: 1.25rem; } } /* sm:text-sm */
+@media (min-width: 640px) { .cardAuthors { font-size: 0.875rem; line-height: 1.25rem; } }
 
 .cardDates {
-  font-size: 0.625rem; line-height: 0.75rem; /* text-[10px] */
-  color: rgba(42, 63, 84, 0.5); /* text-brand-primary/50 */
-  margin-bottom: 0.75rem; /* mb-3 */
+  font-size: 0.625rem; line-height: 0.75rem;
+  color: rgba(42, 63, 84, 0.5); margin-bottom: 0.75rem;
 }
-.cardDates span + span::before { /* space-x-1.5 のような効果 */
-  content: '/';
-  margin-left: 0.375rem; /* 6px */
-  margin-right: 0.375rem;
-}
-@media (min-width: 640px) { /* sm */ .cardDates { font-size: 0.75rem; line-height: 1rem; } } /* sm:text-xs */
+.cardDates span + span::before { content: '/'; margin-left: 0.375rem; margin-right: 0.375rem; }
+@media (min-width: 640px) { .cardDates { font-size: 0.75rem; line-height: 1rem; } }
 
-
-/* AI Summary Section (他も同様にクラス化) */
 .aiSummarySection {
-  margin-bottom: 0.75rem; /* mb-3 */
-  padding: 0.75rem; /* p-3 */
-  background-color: rgba(42, 63, 84, 0.05); /* bg-brand-primary/5 */
-  border-radius: 0.5rem; /* rounded-lg */
-  border: 1px solid rgba(42, 63, 84, 0.1); /* border-brand-primary/10 */
+  margin-bottom: 0.75rem; padding: 0.75rem;
+  background-color: rgba(42, 63, 84, 0.05); border-radius: 0.5rem;
+  border: 1px solid rgba(42, 63, 84, 0.1);
 }
-@media (min-width: 640px) { /* sm */ .aiSummarySection { margin-bottom: 1rem; } } /* sm:mb-4 */
+@media (min-width: 640px) { .aiSummarySection { margin-bottom: 1rem; } }
 
 .aiSummaryHeader {
-  font-weight: 600; /* font-semibold */
-  font-size: 0.875rem; line-height: 1.25rem; /* text-sm */
-  color: #2A3F54; /* text-brand-primary */
-  margin-bottom: 0.375rem; /* mb-1.5 */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  font-weight: 600; font-size: 0.875rem; line-height: 1.25rem;
+  color: #2A3F54; margin-bottom: 0.375rem; display: flex;
+  align-items: center; justify-content: space-between;
 }
-@media (min-width: 640px) { /* sm */ .aiSummaryHeader { font-size: 1rem; line-height: 1.5rem; } } /* sm:text-base */
+@media (min-width: 640px) { .aiSummaryHeader { font-size: 1rem; line-height: 1.5rem; } }
 
-.aiSummaryHeaderText {
-  display: flex;
-  align-items: center;
-}
-.aiSummaryHeaderText svg { /* アイコンのスタイル */
-  height: 1rem; width: 1rem; /* h-4 w-4 */
-  margin-right: 0.25rem; /* mr-1 */
-  color: #EC4899; /* text-brand-accent-pink */
-}
-@media (min-width: 640px) { /* sm */
-  .aiSummaryHeaderText svg { height: 1.25rem; width: 1.25rem; margin-right: 0.375rem; } /* sm:h-5 sm:w-5 sm:mr-1.5 */
-}
+.aiSummaryHeaderText { display: flex; align-items: center; }
+.aiSummaryHeaderText svg { height: 1rem; width: 1rem; margin-right: 0.25rem; color: #EC4899; }
+@media (min-width: 640px) { .aiSummaryHeaderText svg { height: 1.25rem; width: 1.25rem; margin-right: 0.375rem; } }
 
 .generateButton {
-  background-color: #EC4899; /* bg-brand-accent-pink */
-  color: white;
-  font-size: 0.625rem; line-height: 0.75rem; /* text-[10px] */
-  font-weight: 700; /* font-bold */
-  padding: 0.25rem 0.5rem; /* py-1 px-2 */
-  border-radius: 9999px; /* rounded-full */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
-  /* focus, hover スタイルは省略、必要なら追加 */
-  transition: background-color 0.2s;
+  background-color: #EC4899; color: white; font-size: 0.625rem; line-height: 0.75rem;
+  font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 9999px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: background-color 0.2s;
+  border: none; /* ボタンのデフォルトborderをリセット */
+  cursor: pointer;
 }
-.generateButton:hover { background-color: rgba(236, 72, 153, 0.8); } /* hover:bg-opacity-80 */
-@media (min-width: 640px) { /* sm */
-  .generateButton { font-size: 0.75rem; line-height: 1rem; padding: 0.25rem 0.625rem; } /* sm:text-xs sm:px-2.5 */
-}
+.generateButton:hover { background-color: rgba(236, 72, 153, 0.8); }
+@media (min-width: 640px) { .generateButton { font-size: 0.75rem; line-height: 1rem; padding: 0.25rem 0.625rem; } }
 
 .aiSummaryText, .aiSummaryPlaceholder, .aiSummaryLoading {
-  font-size: 0.75rem; line-height: 1rem; /* text-xs */
-  color: #2A3F54; /* text-brand-primary */
-  line-height: 1.6; /* leading-relaxed */
+  font-size: 0.75rem; line-height: 1rem; color: #2A3F54; line-height: 1.6;
 }
-@media (min-width: 640px) { /* sm */
-  .aiSummaryText, .aiSummaryPlaceholder, .aiSummaryLoading { font-size: 0.875rem; line-height: 1.25rem; } /* sm:text-sm */
-}
+@media (min-width: 640px) { .aiSummaryText, .aiSummaryPlaceholder, .aiSummaryLoading { font-size: 0.875rem; line-height: 1.25rem; } }
 .aiSummaryPlaceholder { color: rgba(42, 63, 84, 0.5); font-style: italic; }
 .aiSummaryLoading { color: rgba(42, 63, 84, 0.7); font-style: italic; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
-
-/* Abstract (details/summary) Section */
-.abstractSection { margin-bottom: 0.75rem; } /* mb-3 */
-@media (min-width: 640px) { /* sm */ .abstractSection { margin-bottom: 1rem; } } /* sm:mb-4 */
+.abstractSection { margin-bottom: 0.75rem; }
+@media (min-width: 640px) { .abstractSection { margin-bottom: 1rem; } }
 
 .abstractSummary {
-  cursor: pointer;
-  font-size: 0.75rem; line-height: 1rem; /* text-xs */
-  font-weight: 500; /* font-medium */
-  color: rgba(42, 63, 84, 0.8); /* text-brand-primary/80 */
-  list-style: none; /* list-none */
-  display: flex;
-  align-items: center;
-  transition: color 0.2s;
+  cursor: pointer; font-size: 0.75rem; line-height: 1rem; font-weight: 500;
+  color: rgba(42, 63, 84, 0.8); list-style: none; display: flex;
+  align-items: center; transition: color 0.2s;
 }
-.abstractSummary:hover { color: #2A3F54; } /* hover:text-brand-primary */
-.abstractSummary svg { /* ChevronRightIcon */
-  height: 0.875rem; width: 0.875rem; /* h-3.5 w-3.5 */
-  margin-right: 0.25rem; /* mr-1 */
-  transition: transform 0.2s;
-}
-.abstractSection[open] .abstractSummary svg { /* group-open:rotate-90 */
-  transform: rotate(90deg);
-}
-@media (min-width: 640px) { /* sm */
-  .abstractSummary { font-size: 0.875rem; line-height: 1.25rem; } /* sm:text-sm */
-  .abstractSummary svg { height: 1rem; width: 1rem; } /* sm:h-4 sm:w-4 */
+.abstractSummary:hover { color: #2A3F54; }
+.abstractSummary svg { height: 0.875rem; width: 0.875rem; margin-right: 0.25rem; transition: transform 0.2s; }
+.abstractSection[open] .abstractSummary svg { transform: rotate(90deg); }
+@media (min-width: 640px) {
+  .abstractSummary { font-size: 0.875rem; line-height: 1.25rem; }
+  .abstractSummary svg { height: 1rem; width: 1rem; }
 }
 
 .abstractContent {
-  color: rgba(42, 63, 84, 0.9); /* text-brand-primary/90 */
-  margin-top: 0.375rem; /* mt-1.5 */
-  font-size: 0.75rem; line-height: 1rem; /* text-xs */
-  background-color: rgba(42, 63, 84, 0.05); /* bg-brand-primary/5 */
-  padding: 0.625rem; /* p-2.5 */
-  border-radius: 0.375rem; /* rounded-md */
-  border: 1px solid rgba(42, 63, 84, 0.1); /* border-brand-primary/10 */
-  line-height: 1.6; /* leading-relaxed */
+  color: rgba(42, 63, 84, 0.9); margin-top: 0.375rem; font-size: 0.75rem; line-height: 1rem;
+  background-color: rgba(42, 63, 84, 0.05); padding: 0.625rem; border-radius: 0.375rem;
+  border: 1px solid rgba(42, 63, 84, 0.1); line-height: 1.6;
 }
-@media (min-width: 640px) { /* sm */
-  .abstractContent { font-size: 0.875rem; line-height: 1.25rem; padding: 0.75rem; } /* sm:text-sm sm:p-3 */
-}
+@media (min-width: 640px) { .abstractContent { font-size: 0.875rem; line-height: 1.25rem; padding: 0.75rem; } }
 
-
-/* Categories */
-.categoriesContainer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem; /* gap-1.5 */
-  margin-bottom: 1rem; /* mb-4 */
-}
-@media (min-width: 640px) { /* sm */ .categoriesContainer { margin-bottom: 1.5rem; } } /* sm:mb-6 */
+.categoriesContainer { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 1rem; }
+@media (min-width: 640px) { .categoriesContainer { margin-bottom: 1.5rem; } }
 
 .categoryTag {
-  background-color: rgba(42, 63, 84, 0.1); /* bg-brand-primary/10 */
-  color: rgba(42, 63, 84, 0.8); /* text-brand-primary/80 */
-  font-size: 0.625rem; line-height: 0.75rem; /* text-[10px] */
-  font-weight: 500; /* font-medium */
-  padding: 0.125rem 0.5rem; /* px-2 py-0.5 */
-  border-radius: 9999px; /* rounded-full */
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+  background-color: rgba(42, 63, 84, 0.1); color: rgba(42, 63, 84, 0.8);
+  font-size: 0.625rem; line-height: 0.75rem; font-weight: 500; padding: 0.125rem 0.5rem;
+  border-radius: 9999px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
-@media (min-width: 640px) { /* sm */
-  .categoryTag { font-size: 0.75rem; line-height: 1rem; padding: 0.25rem 0.625rem; } /* sm:text-xs sm:px-2.5 sm:py-1 */
-}
+@media (min-width: 640px) { .categoryTag { font-size: 0.75rem; line-height: 1rem; padding: 0.25rem 0.625rem; } }
 
-
-/* PDF Button Area */
 .pdfButtonArea {
-  position: sticky;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.8); /* bg-brand-card-bg/80 */
+  position: sticky; bottom: -1px; /* -1pxで親要素のpaddingにかからないようにするテクニック */
+  background-color: rgba(255, 255, 255, 0.9); /* 透明度少し上げる */
   backdrop-filter: blur(4px);
-  padding-top: 0.625rem; /* pt-2.5 */
-  padding-bottom: 0.25rem; /* pb-1 */
-  margin-top: auto; /* mt-auto */
-  z-index: 20;
-  border-top: 1px solid rgba(42, 63, 84, 0.1); /* border-brand-primary/10 */
+  padding-top: 0.625rem; padding-bottom: 0.625rem; /* 下にも少しパディング */
+  margin-top: auto; z-index: 20;
+  border-top: 1px solid rgba(42, 63, 84, 0.1);
 }
-@media (min-width: 640px) { /* sm */ .pdfButtonArea { padding-top: 0.75rem; } } /* sm:pt-3 */
+@media (min-width: 640px) { .pdfButtonArea { padding-top: 0.75rem; padding-bottom: 0.75rem; } }
 
-.pdfButtonContainer {
-  display: flex;
-  justify-content: center;
-}
+.pdfButtonContainer { display: flex; justify-content: center; }
 .pdfButton {
-  display: inline-flex;
-  align-items: center;
-  background-color: #2A3F54; /* bg-brand-primary */
-  color: white;
-  font-size: 0.75rem; line-height: 1rem; /* text-xs */
-  font-weight: 600; /* font-semibold */
-  padding: 0.375rem 0.75rem; /* py-1.5 px-3 */
-  border-radius: 9999px;
-  box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.15), 0px 2px 5px rgba(42, 63, 84, 0.1); /* shadow-pop-md */
-  /* focus, hover */
+  display: inline-flex; align-items: center; background-color: #2A3F54;
+  color: white; font-size: 0.75rem; line-height: 1rem; font-weight: 600;
+  padding: 0.375rem 0.75rem; border-radius: 9999px;
+  box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.15), 0px 2px 5px rgba(42, 63, 84, 0.1);
   transition: background-color 0.2s, transform 0.2s;
+  border: none; cursor: pointer;
 }
 .pdfButton:hover { background-color: rgba(42, 63, 84, 0.8); transform: scale(1.05); }
-.pdfButton svg { /* ArrowDownTrayIcon */
-  height: 0.875rem; width: 0.875rem; /* h-3.5 w-3.5 */
-  margin-right: 0.25rem; /* mr-1 */
+.pdfButton svg { height: 0.875rem; width: 0.875rem; margin-right: 0.25rem; }
+@media (min-width: 640px) {
+  .pdfButton { font-size: 0.875rem; line-height: 1.25rem; padding: 0.5rem 1rem; }
+  .pdfButton svg { height: 1rem; width: 1rem; margin-right: 0.375rem; }
 }
-@media (min-width: 640px) { /* sm */
-  .pdfButton { font-size: 0.875rem; line-height: 1.25rem; padding: 0.5rem 1rem; } /* sm:text-sm sm:py-2 sm:px-4 */
-  .pdfButton svg { height: 1rem; width: 1rem; margin-right: 0.375rem; } /* sm:h-4 sm:w-4 sm:mr-1.5 */
-}
-.pdfPlaceholder { /* PDFボタンがない場合の高さ合わせ */
-  height: 1.75rem; /* h-7 (ボタンのpy-1.5 + text-xs line-height 1rem) */
-}
-@media (min-width: 640px) { /* sm */ .pdfPlaceholder { height: 2rem; } } /* sm:h-8 */
+.pdfPlaceholder { height: 1.875rem; } /* py-0.375 + line-height 1rem + py-0.375 */
+@media (min-width: 640px) { .pdfPlaceholder { height: 2.25rem; } } /* py-0.5 + line-height 1.25rem + py-0.5 */
 
-
-/* Loading Indicator (bottom right) */
 .loadingMoreIndicator {
-  position: fixed;
-  bottom: 0.75rem; /* bottom-3 */
-  right: 0.75rem;
-  background-color: rgba(42, 63, 84, 0.8); /* bg-brand-primary/80 */
-  color: white;
-  font-size: 0.625rem; /* text-[10px] */
-  padding: 0.125rem 0.5rem; /* px-2 py-0.5 */
-  border-radius: 9999px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); /* shadow-md */
+  position: fixed; bottom: 0.75rem; right: 0.75rem;
+  background-color: rgba(42, 63, 84, 0.8); color: white; font-size: 0.625rem;
+  padding: 0.125rem 0.5rem; border-radius: 9999px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-@media (min-width: 640px) { /* sm */
-  .loadingMoreIndicator {
-    bottom: 1rem; /* sm:bottom-4 */
-    right: 1rem; /* sm:right-4 */
-    font-size: 0.75rem; /* sm:text-xs */
-    padding: 0.25rem 0.75rem; /* sm:px-3 sm:py-1 */
-  }
-}
+@media (min-width: 640px) { .loadingMoreIndicator { bottom: 1rem; right: 1rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; } }
 
 /* アニメーション (Tailwindのkeyframes/animationの代替) */
 @keyframes flyOutLeft {

@@ -28,7 +28,7 @@ export default function HomePage() {
   const [currentPaperIndex, setCurrentPaperIndex] = useState(0);
   const [likedPapers, setLikedPapers] = useState<string[]>([]);
   const [message, setMessage] = useState<string | null>('Kiga-ers へようこそ！論文を探しています...');
-  const [isLoading, setIsLoading] = useState(true); // 初期ローディング状態はtrue
+  const [isLoading, setIsLoading] = useState(true);
   const [isSummarizing, setIsSummarizing] = useState(false);
 
   const [interactionState, setInteractionState] = useState<{
@@ -50,11 +50,10 @@ export default function HomePage() {
 
   const fetchPapers = useCallback(async (isInitialFetch = false) => {
     console.log(`fetchPapers: Called (isInitialFetch: ${isInitialFetch})`);
-    if (!isInitialFetch && isLoading) { // 追加フェッチの場合、既にローディング中なら何もしない
+    if (!isInitialFetch && isLoading) {
         console.log('fetchPapers: Already loading, skipping additional fetch.');
         return;
     }
-
     setIsLoading(true);
     if (isInitialFetch) {
         setMessage('Kiga-ers へようこそ！論文を探しています...');
@@ -62,7 +61,6 @@ export default function HomePage() {
         setMessage('新しい論文を探しています...');
     }
     setInteractionState(prev => ({ ...prev, cardTransform: '', feedbackColor: '', flyingDirection: null }));
-
     try {
       const response = await fetch('/api/papers');
       console.log('fetchPapers: Response status', response.status);
@@ -73,28 +71,24 @@ export default function HomePage() {
       }
       const data: Paper[] = await response.json();
       console.log('fetchPapers: Data received, length:', data.length);
-
       if (data && data.length > 0) {
         setPapers(prevPapers => {
           const existingIds = new Set(prevPapers.map(p => p.id));
           const newUniquePapers = data.filter(p => !existingIds.has(p.id));
-          console.log('fetchPapers: New unique papers to add:', newUniquePapers.length);
           return [...prevPapers, ...newUniquePapers];
         });
-        setMessage(null); // データ取得成功時はメッセージをクリア
+        setMessage(null);
       } else {
-        // データが空だった場合
         setPapers(prevPapers => {
-            if (prevPapers.length === 0) { // 既に表示中の論文もない場合
+            if (prevPapers.length === 0) {
                 setMessage('表示できる論文が見つかりませんでした。後ほど再読み込みしてください。');
             }
-            // 既に論文がある場合はメッセージは変更しない（Loading more...などが表示されているため）
             return prevPapers;
         });
       }
     } catch (error) {
       console.error('fetchPapers: CATCH Error', error);
-      setPapers(prevPapers => { // エラー時も既存の論文は維持
+      setPapers(prevPapers => {
         if (prevPapers.length === 0) {
             setMessage(`論文の読み込みエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
         }
@@ -104,26 +98,19 @@ export default function HomePage() {
       console.log('fetchPapers: FINALLY');
       setIsLoading(false);
     }
-  }, [isLoading]); // isLoading を依存配列に追加し、連続呼び出しを防ぐ
+  }, [isLoading]);
 
-  // 初回マウント時にデータをフェッチ
   useEffect(() => {
-    console.log('useEffect (Mount): Calling initial fetchPapers.');
-    fetchPapers(true); // isInitialFetch を true にして初回フェッチを明示
+    fetchPapers(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 依存配列を空にすることでマウント時に一度だけ実行
+  }, []);
 
-  // currentPaperIndex が変更されたときに、追加の論文が必要か判断してフェッチ
   useEffect(() => {
-    console.log('useEffect (Index Change): papers.length:', papers.length, 'currentPaperIndex:', currentPaperIndex, 'isLoading:', isLoading);
     if (papers.length > 0 && currentPaperIndex >= papers.length - VISIBLE_CARDS_IN_STACK && !isLoading) {
-      console.log('useEffect (Index Change): Condition met for fetching more papers.');
-      fetchPapers(false); // 追加フェッチ
+      fetchPapers(false);
     }
   }, [currentPaperIndex, papers.length, isLoading, fetchPapers]);
 
-
-  // (generateAiSummary, resetCardInteraction, goToNextPaper, handleSwipeAction, handleTouchStart, handleTouchMove, handleTouchEnd のロジックは変更なし)
   const generateAiSummary = useCallback(async (paperId: string, textToSummarize: string) => {
     if (!textToSummarize || isSummarizing) return;
     setIsSummarizing(true);
@@ -136,32 +123,12 @@ export default function HomePage() {
     finally { setIsSummarizing(false); }
   }, [isSummarizing]);
 
-  const resetCardInteraction = () => {
-    setInteractionState(prev => ({ ...prev, isSwiping: false, cardTransform: '', feedbackColor: '' }));
-    touchStartX.current = null; touchCurrentX.current = null; touchStartY.current = null;
-  };
-
-  const goToNextPaper = useCallback(() => {
-    setCurrentPaperIndex(prevIndex => prevIndex + 1);
-    setTimeout(() => { setInteractionState(prev => ({ ...prev, flyingDirection: null, cardTransform: '' })); }, 100);
-  }, []);
-
-  const handleSwipeAction = useCallback((direction: 'left' | 'right') => {
-    const paperToRate = papers[currentPaperIndex];
-    if (!paperToRate) return;
-    if (direction === 'right') {
-      setLikedPapers(prev => prev.includes(paperToRate.id) ? prev : [...prev, paperToRate.id]);
-      setInteractionState(prev => ({ ...prev, flyingDirection: 'right', feedbackColor: styles.feedbackPink }));
-    } else {
-      setInteractionState(prev => ({ ...prev, flyingDirection: 'left', feedbackColor: styles.feedbackLime }));
-    }
-    setTimeout(() => { goToNextPaper(); }, 600);
-  }, [papers, currentPaperIndex, goToNextPaper]);
-
+  const resetCardInteraction = () => { setInteractionState(prev => ({ ...prev, isSwiping: false, cardTransform: '', feedbackColor: '' })); touchStartX.current = null; touchCurrentX.current = null; touchStartY.current = null; };
+  const goToNextPaper = useCallback(() => { setCurrentPaperIndex(prevIndex => prevIndex + 1); setTimeout(() => { setInteractionState(prev => ({ ...prev, flyingDirection: null, cardTransform: '' })); }, 100); }, []);
+  const handleSwipeAction = useCallback((direction: 'left' | 'right') => { const paperToRate = papers[currentPaperIndex]; if (!paperToRate) return; if (direction === 'right') { setLikedPapers(prev => prev.includes(paperToRate.id) ? prev : [...prev, paperToRate.id]); setInteractionState(prev => ({ ...prev, flyingDirection: 'right', feedbackColor: styles.feedbackPink })); } else { setInteractionState(prev => ({ ...prev, flyingDirection: 'left', feedbackColor: styles.feedbackLime })); } setTimeout(() => { goToNextPaper(); }, 600); }, [papers, currentPaperIndex, goToNextPaper]);
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => { if (!e.touches[0] || interactionState.flyingDirection) return; resetCardInteraction(); touchStartX.current = e.touches[0].clientX; touchCurrentX.current = e.touches[0].clientX; touchStartY.current = e.touches[0].clientY; setInteractionState(prev => ({...prev, isSwiping: true })); };
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => { if (touchStartX.current === null || !e.touches[0] || touchStartY.current === null || !topCardRef.current || interactionState.flyingDirection) return; const currentX = e.touches[0].clientX; const currentY = e.touches[0].clientY; touchCurrentX.current = currentX; const diffX = currentX - touchStartX.current; const diffY = Math.abs(currentY - touchStartY.current); if (diffY > Math.abs(diffX) * 1.8 && diffY > 15) { if(interactionState.isSwiping) resetCardInteraction(); return; } const rotation = (diffX / topCardRef.current.offsetWidth) * SWIPE_MAX_ROTATION; const translateX = diffX * SWIPE_TRANSLATE_X_SCALE; setInteractionState(prev => ({ ...prev, cardTransform: `translateX(${translateX}px) rotate(${rotation}deg)`, feedbackColor: Math.abs(diffX) > SWIPE_THRESHOLD / 2 ? (diffX > 0 ? styles.feedbackPink : styles.feedbackLime) : '' })); };
   const handleTouchEnd = () => { if (touchStartX.current === null || touchCurrentX.current === null || !interactionState.isSwiping || interactionState.flyingDirection) { if (interactionState.isSwiping && !interactionState.flyingDirection) resetCardInteraction(); return; } const diffX = touchCurrentX.current - touchStartX.current; if (Math.abs(diffX) > SWIPE_THRESHOLD) { handleSwipeAction(diffX > 0 ? 'right' : 'left'); } else { resetCardInteraction(); } setInteractionState(prev => ({...prev, isSwiping: false })); };
-
 
   const papersInStack = papers.slice(currentPaperIndex, currentPaperIndex + VISIBLE_CARDS_IN_STACK);
   console.log('Render - isLoading:', isLoading, 'papers.length:', papers.length, 'papersInStack.length:', papersInStack.length, 'currentPaperIndex:', currentPaperIndex, 'message:', message);
@@ -269,7 +236,7 @@ export default function HomePage() {
             );
             })
         ) : (
-          !isLoading && <p className={styles.loadingStateTitle}>全ての論文を見終わりました。再読み込みしてください。</p>
+          !isLoading && <div className={styles.loadingStateContainer}><div className={styles.loadingStateBox}><h1 className={`${styles.loadingStateTitle} pop-title`}>{message || "全ての論文を見終わりました。"}</h1><button onClick={() => fetchPapers(true)} className={styles.reloadButton}>再読み込み</button></div></div>
         )}
       </main>
       {isLoading && papers.length > 0 && (
