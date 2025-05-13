@@ -70,6 +70,7 @@ const parserOptions: Partial<X2jOptions> = {
   // fast-xml-parser v4以降では、要素が1つしかない場合でも配列にするには `preserveOrder: true` と `isArray` の組み合わせや、
   // 後処理で配列化するのが一般的です。
   // ここでは、パース後の処理で配列でない場合に対応します。
+  // ★★★ 修正点: 以下の行を削除 ★★★
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   // isArray: (tagName: string, jPath: string, isNodeEmpty: boolean, isAttribute: boolean): boolean => {
   //   if (jPath === 'feed.entry' || jPath.endsWith('.entry.author') || jPath.endsWith('.entry.link') || jPath.endsWith('.entry.category')) {
@@ -82,7 +83,7 @@ const parserOptions: Partial<X2jOptions> = {
   // },
   parseAttributeValue: true,
   parseTagValue: true,
-  trimValues: true, // 値の前後の空白をトリム
+  trimValues: true,
 };
 
 // --- 型ガード関数 (簡易版) ---

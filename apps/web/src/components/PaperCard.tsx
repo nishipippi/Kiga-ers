@@ -12,7 +12,7 @@ interface PaperCardProps {
   isSummarizing?: boolean; // AI要約生成中かどうか
   onGenerateAiSummary?: (paperId: string, pdfUrl: string, paperTitle: string) => void; // AI要約生成関数
   onLike?: (paper: Paper) => void; // いいね関数 (Paperオブジェクト全体を渡すように変更も検討)
-  onDislike?: (paperId: string) => void; // 興味なし関数
+  onDislike?: () => void; // ★★★ paperId を受け取らないように変更 ★★★
   onRemoveFromLibrary?: (paperId: string) => void; // ライブラリから削除する関数 (ライブラリページ用)
   showSwipeButtons?: boolean; // ホームページのようにスワイプ操作を示唆するボタンを表示するか
   isLiked?: boolean; // この論文がいいねされているか (UI表示用)
@@ -67,12 +67,12 @@ export default function PaperCard({
     }
   };
 
-  const handleDislikeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onDislike) {
-      onDislike(paper.id);
-    }
-  };
+const handleDislikeClick = (e: React.MouseEvent) => {
+  e.stopPropagation();
+  if (onDislike) {
+    onDislike(); // ★★★ 引数なしで呼び出す ★★★
+  }
+};
 
   const handleRemoveFromLibraryClick = (e: React.MouseEvent) => {
     e.stopPropagation();

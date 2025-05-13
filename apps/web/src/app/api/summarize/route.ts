@@ -109,14 +109,18 @@ export async function POST(request: Request) {
         await fs.access(tempFilePath);
         await fs.unlink(tempFilePath);
         console.log(`summarize API: Temporary local file ${tempFilePath} deleted successfully.`);
-      } catch (unlinkError: any) {
-        if (unlinkError.code !== 'ENOENT') {
-          console.error(`summarize API: Error deleting temporary local file ${tempFilePath}:`, unlinkError);
-        } else {
-          console.log(`summarize API: Temporary local file ${tempFilePath} not found for deletion (possibly already deleted or never created).`);
-        }
+    } catch (unlinkError) { // ★★★ 修正: any を削除し、型推論またはunknownを使用 ★★★
+      // NodeJS.ErrnoException 型ガードの例
+      if (unlinkError && typeof unlinkError === 'object' && 'code' in unlinkError && (unlinkError as {code: string}).code !== 'ENOENT') {
+        console.error(`summarize API: Error deleting temporary local file ${tempFilePath}:`, unlinkError);
+      } else if (unlinkError && typeof unlinkError === 'object' && 'code' in unlinkError && (unlinkError as {code: string}).code === 'ENOENT') {
+        console.log(`summarize API: Temporary local file ${tempFilePath} not found for deletion (possibly already deleted or never created).`);
+      } else {
+        // その他の予期しないエラー
+        console.error(`summarize API: An unexpected error occurred while deleting temporary local file ${tempFilePath}:`, unlinkError);
       }
     }
+  }
   } catch (error) {
     console.error('summarize API: Unhandled error occurred:', error);
     const errorMessage = error instanceof Error ? error.message : '不明なサーバーエラーが発生しました。';
