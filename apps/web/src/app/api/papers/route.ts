@@ -85,7 +85,7 @@ export async function GET() {
         let authors: string[] = [];
         if (entry.author) {
             const authorList = Array.isArray(entry.author) ? entry.author : [entry.author];
-            authors = authorList.map((auth: any) => auth?.name || '不明な著者').filter(name => name);
+            authors = authorList.map((auth: any) => auth?.name || '不明な著者').filter((name: any) => name);
         }
 
 
@@ -95,7 +95,7 @@ export async function GET() {
             const categoryList = Array.isArray(entry.category) ? entry.category : [entry.category];
             categories = categoryList
                 .map((cat: any) => cat?.['@_term'])
-                .filter(term => term); // term属性が存在するもののみ
+                .filter((term: any) => term); // term属性が存在するもののみ
          }
 
 
