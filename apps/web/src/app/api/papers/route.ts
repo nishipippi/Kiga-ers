@@ -70,10 +70,11 @@ interface PaperSummary {
 const parserOptions: Partial<X2jOptions> = {
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
-    // isArray: (name, jpath, isLeafNode, isAttribute) => { // fast-xml-parser v3 以前のシグネチャ
     // fast-xml-parser v4 のシグネチャに合わせる (必要に応じてドキュメント確認)
-    // ↓↓↓ 修正箇所 ↓↓↓
-    isArray: (tagName: string, jPath: string, _isNodeEmpty: boolean, _isAttribute: boolean): boolean => {
+    // ↓↓↓ 修正箇所: コメントを追加して未使用変数の警告を無効化 ↓↓↓
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    isArray: (tagName: string, jPath: string, isNodeEmpty: boolean, isAttribute: boolean): boolean => {
+    // ↑↑↑ 修正箇所 ↑↑↑
       // entry, author, link, category は配列として扱うことを保証する
       // 注意: jPath の完全な正確性は XML 構造に依存するため、テストが必要
       if (jPath === 'feed.entry' || jPath.endsWith('.entry.author') || jPath.endsWith('.entry.link') || jPath.endsWith('.entry.category')) {
@@ -85,7 +86,6 @@ const parserOptions: Partial<X2jOptions> = {
       }
       return false; // デフォルトは false
     },
-    // ↑↑↑ 修正箇所 ↑↑↑
     parseAttributeValue: true,
     parseTagValue: true,
   };
