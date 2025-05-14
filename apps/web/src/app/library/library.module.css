@@ -2,7 +2,7 @@
 
 .libraryPageContainer {
   padding: 1.5rem;
-  max-width: 900px; /* リスト表示なので少し幅を広げても良い */
+  max-width: 900px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -25,7 +25,6 @@
   color: #4b5563;
 }
 
-/* ローディング表示用 (任意) */
 .loadingContainer {
   display: flex;
   flex-direction: column;
@@ -35,7 +34,7 @@
   text-align: center;
   color: #666;
 }
-.spinner { /* Detailページと同じスピナーを流用可能 */
+.spinner {
   border: 4px solid rgba(0, 0, 0, 0.1);
   width: 36px;
   height: 36px;
@@ -49,73 +48,146 @@
   100% { transform: rotate(360deg); }
 }
 
-
 .paperList {
-  list-style: none; /* リストマーカーを非表示 */
+  list-style: none;
   padding: 0;
   margin: 0;
 }
 
 .paperListItem {
-  display: flex; /* タイトルとボタンを横並び */
-  justify-content: space-between; /* 両端に配置 */
-  align-items: center; /* 中央揃え (垂直方向) */
-  padding: 1rem 0; /* 上下パディング */
-  border-bottom: 1px solid #e5e7eb; /* 区切り線 */
-  gap: 1rem; /* タイトルとボタンの間の最小限の隙間 */
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* 上揃えに変更 (要約が複数行になる場合を考慮) */
+  padding: 1.5rem 0; /* パディングを少し増やす */
+  border-bottom: 1px solid #e5e7eb;
+  gap: 1rem;
 }
 
 .paperListItem:last-child {
-  border-bottom: none; /* 最後のアイテムの区切り線はなし */
+  border-bottom: none;
+}
+
+.paperInfo { /* ★★★ 追加: タイトルと要約をまとめるコンテナ ★★★ */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column; /* タイトルと要約を縦に並べる */
+  gap: 0.5rem; /* タイトルと要約の間の隙間 */
+  margin-right: 1rem; /* 削除ボタンとの間隔 */
 }
 
 .paperTitleLink {
-  color: #1e3a8a; /* リンクの色 (プロジェクトのテーマに合わせる) */
+  color: #1e3a8a;
   text-decoration: none;
-  font-weight: 500; /* やや太字 */
-  flex-grow: 1; /* タイトル部分が可能な限り幅を取る */
-  overflow: hidden; /* はみ出したテキストを隠す */
-  text-overflow: ellipsis; /* はみ出しを ... で表示 */
-  white-space: nowrap; /* 折り返しなし */
+  font-weight: 600; /* 少し太く */
+  /* flex-grow: 1; .paperInfoが担当 */
+  /* overflow: hidden; タイトルは折り返して表示させることも検討 */
+  /* text-overflow: ellipsis; */
+  /* white-space: nowrap; */
   transition: color 0.2s ease-in-out;
+  line-height: 1.4; /* タイトルの行間 */
 }
 
-.paperTitleLink:hover .paperTitleText { /* ホバー時に下線を表示 */
+.paperTitleLink:hover .paperTitleText {
   text-decoration: underline;
 }
 
 .paperTitleText {
-  font-size: 1.1rem; /* タイトルのフォントサイズ */
-  line-height: 1.5;
-  display: inline-block; /* text-overflowを正しく機能させるため */
+  font-size: 1.15rem; /* 少し大きく */
+  display: inline; /* 通常のテキストフロー */
 }
+
+.aiSummaryText { /* ★★★ 追加: AI要約表示用のスタイル ★★★ */
+  font-size: 0.9rem;
+  color: #374151; /* やや濃いめのグレー */
+  line-height: 1.6;
+  margin-top: 0.25rem;
+  /* 必要に応じて表示行数制限と「もっと見る」を実装 */
+  max-height: 4.8em; /* 約3行分 (1.6 * 3) */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical; */ /* Webkit系ブラウザ用の複数行省略 */
+}
+.aiSummaryText p:first-child { margin-top: 0; } /* FormattedTextRendererの<p>対策 */
+.aiSummaryText p:last-child { margin-bottom: 0; }
+
+.summaryActions { /* ★★★ 追加: 要約生成ボタンコンテナ ★★★ */
+  margin-top: 0.5rem;
+}
+
+.generateSummaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #e0e7ff; /* 薄い青系の背景 */
+  color: #3730a3; /* 青系の文字色 */
+  border: 1px solid #c7d2fe;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.generateSummaryButton:hover:not(:disabled) {
+  background-color: #c7d2fe;
+}
+.generateSummaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.generateSummaryIcon {
+  width: 1rem;
+  height: 1rem;
+}
+.noPdfLinkWarning {
+    font-size: 0.75rem;
+    color: #777;
+    margin-left: 0.5rem;
+}
+
+
+.summarizingIndicator { /* ★★★ 追加: 要約生成中インジケータ ★★★ */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+.summarizingIcon {
+  width: 1rem;
+  height: 1rem;
+  animation: spinLibrary 1s linear infinite; /* スピナーアニメーションを再利用 */
+}
+
 
 .removeButton {
   background: none;
   border: none;
-  color: #ef4444; /* 赤系の削除色 */
+  color: #ef4444;
   cursor: pointer;
-  padding: 0.5rem; /* クリック領域を確保 */
-  border-radius: 50%; /* 円形にする場合 */
+  padding: 0.5rem;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-  flex-shrink: 0; /* ボタンが縮まないように */
+  flex-shrink: 0;
+  align-self: flex-start; /* ボタンをアイテムの上端に配置 */
+  margin-top: 0.125rem; /* タイトルとの微調整 */
 }
 
 .removeButton:hover {
-  background-color: #fee2e2; /* ホバー時の背景色 (薄い赤) */
-  color: #b91c1c; /* ホバー時のアイコン色 (濃い赤) */
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
 .removeButtonIcon {
-  width: 1.25rem; /* アイコンサイズ (20px) */
+  width: 1.25rem;
   height: 1.25rem;
 }
 
-
-/* ライブラリが空の場合のスタイル (変更なし) */
 .emptyLibraryContainer {
   display: flex;
   flex-direction: column;
@@ -126,23 +198,6 @@
   min-height: 60vh;
   color: #6b7280;
 }
-
-.emptyIcon {
-  width: 4rem;
-  height: 4rem;
-  margin-bottom: 1.5rem;
-  color: #9ca3af;
-}
-
-.emptyTitle {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.75rem;
-}
-
-.emptyText {
-  font-size: 1rem;
-  line-height: 1.6;
-  max-width: 400px;
-}
+.emptyIcon { width: 4rem; height: 4rem; margin-bottom: 1.5rem; color: #9ca3af; }
+.emptyTitle { font-size: 1.5rem; font-weight: 600; color: #374151; margin-bottom: 0.75rem; }
+.emptyText { font-size: 1rem; line-height: 1.6; max-width: 400px; }
