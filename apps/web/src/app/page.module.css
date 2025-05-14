@@ -1,13 +1,14 @@
 /* apps/web/src/app/page.module.css */
+/* ホームページ固有のスタイル */
 
 .pageContainer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-height: 100%; /* layout.tsxの .app-container が 100vh を担当するので、ここは100%で良いかも */
+  min-height: 100%;
   padding: 0.75rem;
   user-select: none;
-  width: 100%; /* layoutのmain-content-wrapperに合わせる */
+  width: 100%;
   box-sizing: border-box;
 }
 @media (min-width: 640px) { .pageContainer { padding: 1rem; } }
@@ -25,9 +26,9 @@
 @media (min-width: 640px) { .header { margin-top: 1.5rem; } }
 
 .title {
-  font-size: 1.875rem; /* text-3xl */
+  font-size: 1.875rem;
   line-height: 2.25rem;
-  color: #2A3F54; /* プロジェクトのメインカラーに合わせて調整 */
+  color: #2A3F54;
   text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 @media (min-width: 640px) { .title { font-size: 2.25rem; line-height: 2.5rem; } }
@@ -39,7 +40,7 @@
   display: flex;
   gap: 0.5rem;
   width: 100%;
-  max-width: 28rem; /* 検索フォームの最大幅 */
+  max-width: 28rem;
   margin-left: auto;
   margin-right: auto;
 }
@@ -72,7 +73,7 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .searchInput:focus {
-  border-color: #A9CADB; /* プロジェクトのアクセントカラーに合わせて調整 */
+  border-color: #A9CADB;
   box-shadow: 0 0 0 2px rgba(169, 202, 219, 0.5);
 }
 .searchInput::placeholder { color: rgba(42, 63, 84, 0.4); }
@@ -82,7 +83,7 @@
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   font-weight: 600;
-  background-color: #2A3F54; /* プロジェクトのメインボタンカラー */
+  background-color: #2A3F54;
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -100,33 +101,56 @@
 @media (min-width: 640px) { .subtitle { font-size: 0.875rem; line-height: 1.25rem; } }
 
 .mainContentArea {
-  position: relative; /* カードスタックの基準点 */
+  position: relative;
   width: 100%;
-  max-width: 32rem; /* カードスタックの最大幅 */
-  min-height: 60vh; /* カードが表示されるエリアの最小高さ */
+  max-width: 32rem;
+  height: 65vh; /* カードスタックの高さを指定 (必要に応じて調整) */
   flex-grow: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 1rem; /* ヘッダーとの間隔 */
-  padding-bottom: 1rem; /* フッターとの間隔を考慮 (フッターの高さ分など) */
+  padding-top: 1rem;
+  padding-bottom: 1rem; /* フッターとの干渉を避ける */
   overflow: hidden; /* カードがはみ出さないように */
+  margin: 0 auto; /* 水平中央揃え */
 }
-@media (min-width: 640px) { .mainContentArea { min-height: 65vh; padding-bottom: 1.5rem; } }
-@media (min-width: 1280px) { .mainContentArea { max-width: 36rem; } }
+@media (min-width: 640px) { .mainContentArea { height: 70vh; max-width: 34rem; } }
+@media (min-width: 768px) { .mainContentArea { max-width: 36rem; } }
 
 
-/* PaperCard.module.css に移動したスタイルはここから削除 */
-/* .card, .cardTitle, ... など */
+/* PaperCardコンポーネントをラップするdivに適用するクラス */
+.swipeableCardWrapper { /* ラッパーのクラス名変更 */
+  position: absolute; /* スタック表示のため */
+  width: 90%; /* .mainContentAreaに対する相対幅 */
+  height: 100%; /* .mainContentAreaに対する相対高さ */
+  max-width: calc(100% - 2rem); /* 左右に少し余白を持たせる場合 */
+  display: flex; /* PaperCard内部の.cardContentWrapperがflexアイテムとして振る舞う */
+  cursor: grab;
+  transition-property: transform, opacity;
+  transition-duration: 0.3s;
+  transition-timing-function: ease-out;
+  border-radius: 0.75rem; /* PaperCard.module.cssの.cardContentWrapperと合わせる */
+  box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15);
+  /* PaperCard自体は背景などを持たない想定なので、ここで背景色を指定しても良いし、PaperCard側でも良い */
+  /* background-color: #FFFFFF; */ /* PaperCard側で指定するなら不要 */
+  overflow: hidden; /* PaperCardの角丸を反映させるため */
+}
+.swipeableCardWrapper.isSwiping {
+  transition-duration: 0s !important;
+}
+.swipeableCardWrapper.activeGrab {
+  cursor: grabbing;
+}
 
-/* スワイプ時のフィードバックオーバーレイの色 (PaperCard側でも定義可能) */
-.feedbackPinkLike { background-color: #EC4899; } /* いいね時の色 */
-.feedbackLimeDislike { background-color: #84CC16; } /* 興味なし時の色 */
+/* スワイプフィードバックの色 (PaperCard内部のオーバーレイに適用するクラスとして渡す) */
+.feedbackPinkLike { background-color: #EC4899; } /* 透明度はPaperCard.module.cssの.swipeFeedbackOverlayで設定 */
+.feedbackLimeDislike { background-color: #84CC16; }
 
 
 .loadingMoreIndicator {
   position: fixed;
-  bottom: calc(var(--footer-height, 60px) + 0.75rem); /* フッターの高さを考慮 */
+  /* フッターの高さをCSS変数で取得 (globals.cssなどで定義想定) */
+  bottom: calc(var(--footer-height, 60px) + 0.75rem);
   right: 0.75rem;
   background-color: rgba(42, 63, 84, 0.8);
   color: white;
@@ -134,20 +158,19 @@
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  animation: pulsePage 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; /* アニメーション名を変更 */
+  animation: pulsePage 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 @media (min-width: 640px) { .loadingMoreIndicator { bottom: calc(var(--footer-height, 60px) + 1rem); right: 1rem; font-size: 0.75rem; padding: 0.25rem 0.75rem; } }
 
-/* アニメーション (PaperCardに直接適用するものはPaperCard.module.cssへ) */
-@keyframes pulsePage { /* PaperCard.module.cssのpulseと区別 */
+@keyframes pulsePage {
   0%, 100% { opacity: 1; }
   50% { opacity: .5; }
 }
-@keyframes spinPage { /* PaperCard.module.cssのspinと区別 */
+@keyframes spinPage {
   to { transform: rotate(360deg); }
 }
 
-/* スワイプアニメーション (PaperCardへ渡すクラス名として定義) */
+/* スワイプアニメーション (PaperCardをラップするdivに適用するクラス) */
 .animateFlyOutLeft {
   animation: flyOutLeftPage 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
 }
@@ -168,12 +191,13 @@
   animation: nextCardEnterPage 0.4s ease-out forwards;
 }
 @keyframes nextCardEnterPage {
-  0% { transform: scale(0.9) translateY(20px) rotate(0deg); opacity: 0.7; }
+  /* スタックの下から上がってくるカードのアニメーション */
+  0% { transform: scale(0.92) translateY(16px) rotate(0deg); opacity: 0.5; } /* 初期状態を調整 */
   100% { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; }
 }
 
 
-/* ローディング状態表示 (PaperCardとは独立した要素) */
+/* ローディング状態表示 */
 .loadingStateContainer {
   display: flex;
   flex-direction: column;
@@ -181,14 +205,21 @@
   justify-content: center;
   text-align: center;
   width: 100%;
-  flex-grow: 1; /* 空いているスペースを埋める */
+  flex-grow: 1;
+  /* .mainContentArea の中央に配置されるように調整 */
+  position: absolute; /* .mainContentArea が relative なので、その中で絶対配置 */
+  inset: 0;
+  background-color: rgba(230, 238, 242, 0.8); /* 背景を少し透過させる */
+  z-index: 100; /* カードより手前に */
+  border-radius: 0.75rem; /* mainContentArea の見た目に合わせる */
 }
 .loadingStateBox {
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(4px);
   padding: 2rem;
   border-radius: 1rem;
   box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15);
+  max-width: 90%;
 }
 @media (min-width: 640px) { .loadingStateBox { padding: 2.5rem; } }
 
@@ -201,7 +232,7 @@
 @media (min-width: 768px) { .loadingStateTitle { font-size: 2.25rem; } }
 
 .loadingSpinner {
-  animation: spinPage 1s linear infinite; /* spinPageを使用 */
+  animation: spinPage 1s linear infinite;
   border-radius: 9999px;
   height: 3rem;
   width: 3rem;
@@ -231,4 +262,47 @@
 .reloadButton:hover { background-color: rgba(42, 63, 84, 0.8); transform: scale(1.05); }
 @media (min-width: 640px) { .reloadButton { padding: 0.75rem 2rem; font-size: 1rem; } }
 
-/* .clearSearchButton は PaperCard.module.css の .endOfFeedCard 内のボタンとして定義される想定 */
+/* EndOfFeedCard用のコンテナスタイル (PaperCardをラップするdivに適用) */
+.endOfFeedCardWrapper { /* ラッパーのクラス名変更 */
+  position: absolute;
+  width: 90%;
+  height: 100%; /* mainContentArea に合わせる */
+  max-width: calc(100% - 2rem);
+  display: flex; /* PaperCard内部がflexアイテムとして振る舞う */
+  flex-direction: column; /* PaperCardの内部構造に合わせる */
+  border-radius: 0.75rem;
+  border: 2px dashed rgba(42, 63, 84, 0.3);
+  background-color: #f0f4f8; /* PaperCard側ではなく、ここで背景を指定 */
+  align-items: center; /* PaperCard内のコンテンツを中央揃えにするため */
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem; /* PaperCardのpaddingと合わせるか、ここで調整 */
+  box-sizing: border-box;
+  box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.1);
+  overflow: hidden; /* PaperCardの角丸を反映 */
+}
+/* EndOfFeedCard内部のテキストスタイル (PaperCard.module.css に定義されたものを参照、またはここで上書き) */
+.endOfFeedTitle { /* PaperCard.module.css の .cardTitle に似たスタイル */
+  font-size: 1.25rem;
+  color: #2A3F54;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  /* position:sticky は不要 */
+}
+.endOfFeedMessage {
+  font-size: 0.875rem;
+  color: rgba(42, 63, 84, 0.8);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+.endOfFeedButton { /* .reloadButton をベースに調整 */
+  /* .reloadButton のスタイルを基本とし、必要ならマージンなどを追加 */
+  margin: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.endOfFeedButton svg { /* PaperCard.module.css の .pcActionButtonIcon に似せる */
+  height: 1.1rem;
+  width: 1.1rem;
+}
