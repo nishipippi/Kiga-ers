@@ -1,75 +1,48 @@
 /* apps/web/src/app/library/library.module.css */
 
 .libraryPageContainer {
-  padding: 1rem 1.5rem 2rem 1.5rem; /* 上下左右のパディング */
-  max-width: 1280px; /* ページ全体の最大幅 */
-  margin-left: auto;  /* 中央揃え */
-  margin-right: auto; /* 中央揃え */
+  padding: 1.5rem;
+  max-width: 1200px; /* ページ全体の最大幅 */
+  margin: 0 auto; /* 中央揃え */
   width: 100%;
   box-sizing: border-box;
-  /* フッターとヘッダーの高さをCSS変数で取得できる場合は、それを利用して最小高さを設定 */
-  /* 例: min-height: calc(100vh - var(--header-height, 60px) - var(--footer-height, 60px)); */
-  /* 現状はシンプルに flex-grow で対応 */
 }
 
 .header {
   margin-bottom: 2rem;
-  padding-top: 1rem; /* ページ上部のスペース */
   text-align: center;
 }
 
 .pageTitle {
-  font-size: clamp(1.8rem, 5vw, 2.25rem); /* レスポンシブなフォントサイズ */
+  font-size: 2rem; /* text-3xl or text-4xl */
   font-weight: 700; /* font-bold */
-  color: #2A3F54; /* プロジェクトのテーマカラー */
+  color: #2A3F54; /* プロジェクトのメインカラー */
   margin-bottom: 0.5rem;
 }
 
 .pageSubtitle {
-  font-size: clamp(0.9rem, 2.5vw, 1rem); /* レスポンシブなフォントサイズ */
+  font-size: 1rem; /* text-base */
   color: #4b5563; /* やや薄めのテキストカラー */
 }
 
 .papersGrid {
   display: grid;
-  /* スマートフォンでは1列 */
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* レスポンシブなグリッド */
   gap: 1.5rem; /* カード間の隙間 */
 }
 
-/* タブレットサイズ (例: 640px) 以上でのグリッド設定 */
-@media (min-width: 640px) {
-  .papersGrid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* 最小幅300pxで自動充填 */
-  }
-}
-/* より大きな画面 (例: 1024px) でのグリッド設定 (任意) */
-@media (min-width: 1024px) {
-  .papersGrid {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* 最小幅を少し広げる */
-    gap: 2rem; /* 隙間を広げる */
-  }
-}
-
-
-/* PaperCardコンポーネントをラップするdivに適用するクラス */
-.libraryGridItemContainer {
-  width: 100%; /* グリッドカラムの幅いっぱいに広がる */
-  /* カードの高さを固定したい場合はここで指定。例: height: 500px; */
-  /* PaperCard.module.cssの.cardContentWrapperがheight:100%なので、このコンテナで高さを制御 */
-  display: flex; /* PaperCardコンポーネントが内部でflex-direction:columnなので、これで高さが伝わる */
-  flex-direction: column; /* 念のため指定 */
-  border-radius: 0.75rem; /* PaperCardの見た目と合わせる */
-  box-shadow: 0px 8px 20px rgba(42, 63, 84, 0.1), 0px 4px 8px rgba(42, 63, 84, 0.07); /* 少し控えめな影 */
+.libraryCard {
+  /* PaperCard.module.css の .card.static スタイルを継承またはここで上書き */
+  /* 例: position: relative; width: 100%; など */
+  /* PaperCard.tsxでclassNameに渡すことで、PaperCard.module.cssのスタイルに加えて適用される */
+  /* 必要であれば、PaperCard自体のスタイルを調整するのではなく、ここで追加のスタイルを定義 */
+  cursor: pointer; /* 詳細表示があるため */
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  cursor: pointer; /* 詳細ページへ遷移するため */
-  background-color: #fff; /* カードの背景色 (PaperCard自体が背景を持つ場合不要かも) */
-  overflow: hidden; /* PaperCardの内容がはみ出さないように */
 }
 
-.libraryGridItemContainer:hover {
+.libraryCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0px 12px 28px rgba(42, 63, 84, 0.12), 0px 6px 12px rgba(42, 63, 84, 0.08);
+  box-shadow: 0px 15px 35px rgba(42, 63, 84, 0.15), 0px 8px 15px rgba(42, 63, 84, 0.1);
 }
 
 
@@ -81,27 +54,26 @@
   justify-content: center;
   text-align: center;
   padding: 3rem 1rem;
-  /* フッターの高さを考慮した最小高さ (CSS変数があれば利用) */
-  min-height: calc(60vh - var(--footer-height, 60px));
-  color: #6b7280;
+  min-height: 60vh; /* フッターを考慮した高さ */
+  color: #6b7280; /* やや薄めのテキストカラー */
 }
 
 .emptyIcon {
-  width: 4rem;
+  width: 4rem; /* アイコンサイズ (64px) */
   height: 4rem;
   margin-bottom: 1.5rem;
-  color: #9ca3af;
+  color: #9ca3af; /* さらに薄いアイコンカラー */
 }
 
 .emptyTitle {
-  font-size: 1.5rem;
+  font-size: 1.5rem; /* text-2xl */
   font-weight: 600;
-  color: #374151;
+  color: #374151; /* 少し濃いめのテキストカラー */
   margin-bottom: 0.75rem;
 }
 
 .emptyText {
-  font-size: 1rem;
+  font-size: 1rem; /* text-base */
   line-height: 1.6;
   max-width: 400px;
 }
