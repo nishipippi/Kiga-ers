@@ -1,16 +1,17 @@
 // apps/web/src/app/library/page.tsx
 'use client';
 
-import React, { useState, useCallback } from 'react'; // useState, useCallback をインポート
+import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useLikedPapers } from '@/contexts/LikedPapersContext';
-import FormattedTextRenderer from '@/components/FormattedTextRenderer'; // 要約表示に使用
+import FormattedTextRenderer from '@/components/FormattedTextRenderer';
 import styles from './library.module.css';
 import { BookmarkSlashIcon, TrashIcon, SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 export default function LibraryPage() {
-  const { likedPapers, removeLikedPaper, isPaperLiked, updateLikedPaperSummary, isLoadingPersistence } = useLikedPapers();
-  const [isSummarizing, setIsSummarizing] = useState<string | null>(null); // 要約生成中の論文IDを管理
+  // ★★★ 修正点: isPaperLiked を削除 ★★★
+  const { likedPapers, removeLikedPaper, updateLikedPaperSummary, isLoadingPersistence } = useLikedPapers();
+  const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
 
   const handleRemoveFromLibrary = (paperId: string, paperTitle: string) => {
     if (confirm(`「${paperTitle}」をライブラリから削除しますか？`)) {
@@ -19,7 +20,7 @@ export default function LibraryPage() {
   };
 
   const handleGenerateSummary = useCallback(async (paperId: string, pdfUrl: string, paperTitle: string) => {
-    if (isSummarizing === paperId || !pdfUrl) return; // 既に処理中かURLがなければ何もしない
+    if (isSummarizing === paperId || !pdfUrl) return;
 
     setIsSummarizing(paperId);
     try {
@@ -33,7 +34,7 @@ export default function LibraryPage() {
         throw new Error(errorData.error || `要約の生成に失敗しました (Status: ${response.status})`);
       }
       const data = await response.json();
-      updateLikedPaperSummary(paperId, data.summary); // Contextの関数で状態を更新
+      updateLikedPaperSummary(paperId, data.summary);
     } catch (error) {
       console.error('Failed to generate summary in library:', error);
       alert(`要約生成エラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
