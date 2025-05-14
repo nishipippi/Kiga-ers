@@ -62,6 +62,10 @@ export async function POST(request: Request) {
       console.log(`ask-ai API: Uploading file "${tempFilePath}" to Gemini.`);
       uploadedFileResponse = await ai.files.upload({
         file: tempFilePath,
+        config: { // ★★★ 修正点 ★★★
+          mimeType: "application/pdf",
+        },
+        // displayName: safePaperTitle
       });
       console.log(`ask-ai API: File uploaded to Gemini. Name: ${uploadedFileResponse.name}, URI: ${uploadedFileResponse.uri}`);
 
@@ -95,10 +99,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ answer });
 
     } finally {
-      if (uploadedFileResponse && uploadedFileResponse.name) { // ★★★ 修正点: name が存在することを確認 ★★★
+      if (uploadedFileResponse && uploadedFileResponse.name) {
         try {
           console.log(`ask-ai API: Deleting uploaded file from Gemini: ${uploadedFileResponse.name}`);
-          // ★★★ 修正点: オブジェクトでパラメータを渡す ★★★
           await ai.files.delete({ name: uploadedFileResponse.name });
           console.log(`ask-ai API: Gemini file ${uploadedFileResponse.name} deleted successfully.`);
         } catch (deleteError) {
@@ -110,18 +113,19 @@ export async function POST(request: Request) {
         await fs.access(tempFilePath);
         await fs.unlink(tempFilePath);
         console.log(`ask-ai API: Temporary local file ${tempFilePath} deleted successfully.`);
-    } catch (unlinkError) { // ★★★ 修正: any を削除し、型推論またはunknownを使用 ★★★
-      // NodeJS.ErrnoException 型ガードの例
-      if (unlinkError && typeof unlinkError === 'object' && 'code' in unlinkError && (unlinkError as {code: string}).code !== 'ENOENT') {
-        console.error(`ask-ai API: Error deleting temporary local file ${tempFilePath}:`, unlinkError);
-      } else if (unlinkError && typeof unlinkError === 'object' && 'code' in unlinkError && (unlinkError as {code: string}).code === 'ENOENT') {
-        console.log(`ask-ai API: Temporary local file ${tempFilePath} not found for deletion.`);
-      } else {
-        // その他の予期しないエラー
-        console.error(`ask-ai API: An unexpected error occurred while deleting temporary local file ${tempFilePath}:`, unlinkError);
+      } catch (unlinkError) {
+        if (unlinkError && typeof unlinkError === 'object' && 'code' in unlinkError) {
+          const nodeError = unlinkError as NodeJS.ErrnoException;
+          if (nodeError.code !== 'ENOENT') {
+            console.error(`ask-ai API: Error deleting temporary local file ${tempFilePath}:`, nodeError);
+          } else {
+            console.log(`ask-ai API: Temporary local file ${tempFilePath} not found for deletion (ENOENT).`);
+          }
+        } else {
+          console.error(`ask-ai API: An unexpected error type occurred while deleting temporary local file ${tempFilePath}:`, unlinkError);
+        }
       }
     }
-  }
   } catch (error) {
     console.error('ask-ai API: Unhandled error occurred:', error);
     const errorMessage = error instanceof Error ? error.message : '不明なサーバーエラーが発生しました。';
