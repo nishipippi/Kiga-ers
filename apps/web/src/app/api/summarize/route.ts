@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     console.log(`summarize API: Received request to summarize PDF: ${pdfUrl} (Title: ${safePaperTitle})`);
 
-    const modelName = "gemini-2.0-flash-latest";
+    const modelName = "gemini-2.0-flash";
 
     const tempDir = os.tmpdir();
     const uniqueFileName = `summary_paper_${Date.now()}_${path.basename(new URL(pdfUrl).pathname) || 'downloaded.pdf'}`.replace(/[^a-zA-Z0-9_.-]/g, '_');

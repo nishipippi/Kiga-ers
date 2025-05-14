@@ -20,10 +20,10 @@ export default function HomePage() {
   const [currentPaperIndex, setCurrentPaperIndex] = useState(0);
   const { likedPapers, addLikedPaper, isPaperLiked } = useLikedPapers();
   const [message, setMessage] = useState<string | null>('Kiga-ers へようこそ！論文を探しています...');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // ★★★ 初期表示時はtrue ★★★
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentSearchTerm, setCurrentSearchTerm] = useState('');
+  const [currentSearchTerm, setCurrentSearchTerm] = useState(''); // 初期値は空文字列
   const [hasMorePapers, setHasMorePapers] = useState(true);
 
   const [interactionState, setInteractionState] = useState<{
@@ -58,21 +58,25 @@ export default function HomePage() {
       }
     }
 
-    setIsLoading(true);
+    setIsLoading(true); // APIコール前に必ずローディング状態にする
     canFetchMoreRef.current = false;
 
     if (isInitialOrNewSearch) {
-      if (effectiveSearchTermForFetch) { setMessage(`「${effectiveSearchTermForFetch}」の論文を検索中...`); }
-      else { setMessage('Kiga-ers へようこそ！論文を探しています...'); }
+      // isInitialOrNewSearch が true の場合、メッセージは fetchPapers を呼び出す直前に設定済みのはず
+      // ここでは termToSearchForFetch の有無でメッセージを変える必要はないかもしれない
+      // if (effectiveSearchTermForFetch) { setMessage(`「${effectiveSearchTermForFetch}」の論文を検索中...`); }
+      // else { setMessage('Kiga-ers へようこそ！論文を探しています...'); }
       setPapers([]);
       setCurrentPaperIndex(0);
-      setHasMorePapers(true);
+      setHasMorePapers(true); // 新規検索時は必ず true に戻す
+      // currentSearchTerm は handleSearchSubmit で更新されるのでここでは不要
     } else {
-      setMessage('新しい論文を探しています...');
+      setMessage('新しい論文を探しています...'); // 追加ロード時のメッセージ
     }
     setInteractionState({ isSwiping: false, cardTransform: '', feedbackColor: '', flyingDirection: null });
 
     try {
+      // termToSearchForFetch が空でもAPI側でデフォルトカテゴリが使われる想定
       let apiUrl = effectiveSearchTermForFetch ? `/api/papers?query=${encodeURIComponent(effectiveSearchTermForFetch)}` : '/api/papers';
       apiUrl += `${apiUrl.includes('?') ? '&' : '?'}start=${offsetForFetch}&max_results=${MAX_RESULTS_PER_FETCH_PAGE}`;
       const response = await fetch(apiUrl);
@@ -99,36 +103,63 @@ export default function HomePage() {
         return updatedPapersArray;
       });
       setHasMorePapers(morePapersPotentiallyAvailableBasedOnAPI);
-      if (data.length > 0 || (isInitialOrNewSearch && data.length ===0) ) setMessage(null);
+      if (data.length > 0 || (isInitialOrNewSearch && data.length ===0) ) {
+        setMessage(null); // 論文があればメッセージを消す
+      } else if (isInitialOrNewSearch && data.length === 0) {
+        // 初期検索で結果0件の場合のメッセージ (fetchPapers呼び出し側で設定済みのはず)
+        // setMessage(currentSearchTerm ? `「${currentSearchTerm}」に一致する論文は見つかりませんでした。` : "表示できる論文がありません。");
+      }
+
 
     } catch (error) {
       console.error('fetchPapers: CATCH Error', error);
       setHasMorePapers(false);
-      if (isInitialOrNewSearch) { setPapers([]); setMessage(`論文の読み込みエラー: ${error instanceof Error ? error.message : '不明なエラー'}`);}
+      // isInitialOrNewSearch でメッセージを設定 (エラー時)
+      const errorMsg = error instanceof Error ? error.message : '不明なエラー';
+      setMessage(isInitialOrNewSearch
+          ? (currentSearchTerm ? `「${currentSearchTerm}」の論文読み込みエラー: ${errorMsg}` : `論文読み込みエラー: ${errorMsg}`)
+          : `追加の論文読み込みエラー: ${errorMsg}`
+      );
+      if (isInitialOrNewSearch) { setPapers([]); }
+
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // APIコール完了後にローディング解除
       setTimeout(() => { canFetchMoreRef.current = true; }, 300);
     }
   }, [currentSearchTerm, isLoading, hasMorePapers, setIsLoading, setPapers, setCurrentPaperIndex, setMessage, setHasMorePapers, setInteractionState]);
 
   const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => { setSearchQuery(event.target.value); };
-  const handleSearchSubmit = (event?: React.FormEvent<HTMLFormElement>) => { if (event) event.preventDefault(); const term = searchQuery.trim(); setCurrentSearchTerm(term); fetchPapers(true, term, 0); };
+  
+  const handleSearchSubmit = (event?: React.FormEvent<HTMLFormElement>) => {
+    if (event) event.preventDefault();
+    const term = searchQuery.trim();
+    console.log('Search submitted with query:', term);
+    setCurrentSearchTerm(term); // ★★★ 検索実行時に currentSearchTerm を更新 ★★★
+    setMessage(term ? `「${term}」の論文を検索中...` : 'Kiga-ers へようこそ！論文を探しています...'); // メッセージを検索開始時に設定
+    fetchPapers(true, term, 0); // isInitialOrNewSearch = true で新規検索
+  };
 
+  // ★★★ 初期ロード用のuseEffectを修正 ★★★
   useEffect(() => {
-    if (papers.length === 0 && currentSearchTerm === '' && !isLoading && hasMorePapers) {
-        console.log('useEffect (Mount): Calling initial fetchPapers.');
-        fetchPapers(true, '', 0);
+    // ページロード時に一度だけ実行
+    // currentSearchTerm が空（つまりまだ何も検索していない）かつ、論文が0件の場合に初期フェッチ
+    if (papers.length === 0 && currentSearchTerm === '') {
+      console.log('useEffect (Mount): Calling initial fetchPapers for default content.');
+      // 初期メッセージは fetchPapers 内で設定されるか、ここで明示的に設定
+      setMessage('Kiga-ers へようこそ！論文を探しています...');
+      fetchPapers(true, '', 0); // currentSearchTerm（空文字列）でデフォルト検索
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [papers.length, currentSearchTerm, isLoading, hasMorePapers]);
+  }, []); // 空の依存配列でマウント時に一度だけ実行
 
-  useEffect(() => {
+  useEffect(() => { // 追加ロード用
     const actualPapersLength = papers.filter(p => !p.isEndOfFeedCard).length;
     const thresholdIndex = actualPapersLength > VISIBLE_CARDS_IN_STACK_PAGE ? actualPapersLength - VISIBLE_CARDS_IN_STACK_PAGE : (actualPapersLength > 0 ? actualPapersLength - 1 : 0);
     const needsMoreFetch = actualPapersLength > 0 && currentPaperIndex >= thresholdIndex;
     const alreadyHasEndOfFeedCard = papers.some(p => p.id === END_OF_FEED_CARD_ID_PAGE);
 
     if (needsMoreFetch && !isLoading && hasMorePapers && !alreadyHasEndOfFeedCard && canFetchMoreRef.current) {
+      console.log('useEffect (Index/State Change): Condition met for fetching more papers. Term:', currentSearchTerm, 'Offset:', actualPapersLength);
       fetchPapers(false, currentSearchTerm, actualPapersLength);
     }
   }, [currentPaperIndex, papers, currentSearchTerm, isLoading, hasMorePapers, fetchPapers]);
@@ -179,12 +210,21 @@ export default function HomePage() {
   const papersInStack = papers.slice(currentPaperIndex, currentPaperIndex + VISIBLE_CARDS_IN_STACK_PAGE);
 
   const renderStatusDisplay = () => {
-    if (papers.length > 0 && !(papers.length === 1 && papers[0].isEndOfFeedCard) ) return null;
-    if (isLoading && papers.filter(p=>!p.isEndOfFeedCard).length === 0) {
+    // 論文カードがスタックにあり、かつそれがEndOfFeedCardでない場合、またはスタックが空でも論文リスト自体にEndOfFeedCard以外のカードがあれば、ステータス表示は不要
+    if (papersInStack.length > 0 && !papersInStack.every(p => p.isEndOfFeedCard)) return null;
+    if (papers.length > 0 && !papers.every(p=> p.isEndOfFeedCard) && papersInStack.length === 0 && currentPaperIndex < papers.filter(p=>!p.isEndOfFeedCard).length) {
+        // スタックは空だが、まだスワイプしていない論文が残っている場合（EndOfFeedCardに到達する前）
+        // このケースは通常、次の論文を準備中の表示になるはず
+    }
+
+
+    // ローディング中で、かつ表示すべき「実際の」論文がまだない場合
+    if (isLoading && papers.filter(p => !p.isEndOfFeedCard).length === 0) {
       return ( <div className={styles.loadingStateContainer}><div className={styles.loadingStateBox}><h1 className={`${styles.loadingStateTitle} pop-title`}>{message || '論文を探しています...'}</h1><div className={styles.loadingSpinner}></div></div></div> );
     }
-    if(!isLoading && papers.filter(p=>!p.isEndOfFeedCard).length === 0 && !papers.find(p=>p.id === END_OF_FEED_CARD_ID_PAGE)) {
-      return ( <div className={styles.loadingStateContainer}><div className={styles.loadingStateBox}><h1 className={`${styles.loadingStateTitle} pop-title`}>{message || "表示できる論文がありません。"}</h1><button onClick={() => fetchPapers(true, currentSearchTerm, 0)} className={styles.reloadButton}>再読み込み</button></div></div> );
+    // ローディングが完了し、表示すべき「実際の」論文がなく、かつEndOfFeedCardもない場合
+    if (!isLoading && papers.filter(p => !p.isEndOfFeedCard).length === 0 && !papers.some(p => p.id === END_OF_FEED_CARD_ID_PAGE)) {
+      return ( <div className={styles.loadingStateContainer}><div className={styles.loadingStateBox}><h1 className={`${styles.loadingStateTitle} pop-title`}>{message || "表示できる論文がありません。"}</h1><button onClick={() => {setMessage(currentSearchTerm ? `「${currentSearchTerm}」の論文を再読み込み中...` : '論文を再読み込み中...'); fetchPapers(true, currentSearchTerm, 0);}} className={styles.reloadButton}>再読み込み</button></div></div> );
     }
     return null;
   };
@@ -197,16 +237,17 @@ export default function HomePage() {
           <div className={styles.searchBarContainer}><MagnifyingGlassIcon className={styles.searchIcon} /><input type="search" placeholder="論文を検索 (例: machine learning)" value={searchQuery} onChange={handleSearchInputChange} className={styles.searchInput} /></div>
           <button type="submit" className={styles.searchButton}>検索</button>
         </form>
-        <p className={styles.subtitle}>いいねした論文: {likedPapers.length}件 {currentSearchTerm && ` / 検索結果: "${currentSearchTerm}"`} </p>
+        <p className={styles.subtitle}>いいねした論文: {likedPapers.length}件 {currentSearchTerm && ` / 検索結果: "${currentSearchTerm}"`}</p>
       </header>
       {renderStatusDisplay()}
-      {papers.length > 0 && (
+      {/* 論文カードの表示は、papers配列にEndOfFeedCard以外のカードが1枚でもあれば行う */}
+      {papers.some(p => !p.isEndOfFeedCard) && (
         <main className={styles.mainContentArea}>
           {papersInStack.length > 0 ? (
             papersInStack.slice().reverse().map((paper, indexInVisibleStack_reversed) => {
               const indexInStack = (VISIBLE_CARDS_IN_STACK_PAGE - 1) - indexInVisibleStack_reversed;
               const isTopCard = indexInStack === 0;
-              const cardDynamicStyles: React.CSSProperties = {}; // ★★★ const に変更 ★★★
+              const cardDynamicStyles: React.CSSProperties = {};
               let animationClass = '';
 
               if (isTopCard) {
@@ -244,8 +285,8 @@ export default function HomePage() {
                 />
               );
             })
-          ) : (
-            !isLoading && papers.length > 0 && currentPaperIndex >= papers.filter(p=>!p.isEndOfFeedCard).length && !papers.find(p=>p.id === END_OF_FEED_CARD_ID_PAGE) &&
+          ) : ( /* スタックが空になったが、まだスワイプしていない「実際の」論文がある場合（EndOfFeedCardに到達する前） */
+            !isLoading && papers.length > 0 && currentPaperIndex < papers.filter(p => !p.isEndOfFeedCard).length &&
             <div className={styles.loadingStateContainer}><div className={styles.loadingStateBox}><h1 className={`${styles.loadingStateTitle} pop-title`}>次の論文を準備中...</h1></div></div>
           )}
         </main>
