@@ -1,73 +1,133 @@
 // apps/web/src/app/api/summarize/route.ts
 import { NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai'; // 正しいSDKをインポート
+import { GoogleGenAI } from '@google/genai';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
 
-// 環境変数からAPIキーを取得
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// APIキーが設定されていない場合は、初期化時にエラーを発生させる
 if (!GEMINI_API_KEY) {
-  console.error('FATAL ERROR: GEMINI_API_KEY environment variable is not set.');
-  // サーバー起動時にエラーがわかるように、ここではエラーを投げる
-  throw new Error('サーバー設定エラー: Gemini APIキーが設定されていません。アプリケーションを起動できません。');
-  // もしくは、リクエスト時にエラーを返す場合は以下のようにもできるが、起動時エラーの方が問題発見が早い
-  // return NextResponse.json({ error: 'サーバー設定エラー: APIキーがありません。' }, { status: 500 });
+  console.error('FATAL ERROR: SUMMARIZE - GEMINI_API_KEY environment variable is not set.');
 }
 
-// GoogleGenAIクライアントを初期化 (APIキーを渡す)
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY! });
 
-// POSTリクエストを処理する関数をエクスポート
+async function downloadFile(url: string, outputPath: string): Promise<void> {
+  console.log(`summarize/downloadFile: Attempting to download from ${url} to ${outputPath}`);
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`summarize/downloadFile: Failed to download file (${response.status}): ${errorText} from ${url}`);
+    throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+  }
+  const buffer = await response.arrayBuffer();
+  await fs.writeFile(outputPath, Buffer.from(buffer));
+  console.log(`summarize/downloadFile: File downloaded successfully to ${outputPath}`);
+}
+
 export async function POST(request: Request) {
+  if (!GEMINI_API_KEY) {
+    console.error('SUMMARIZE API Error: GEMINI_API_KEY is not set at request time.');
+    return NextResponse.json({ error: 'サーバー設定エラー: APIキーが設定されていません。' }, { status: 500 });
+  }
+
   try {
-    // リクエストボディをJSONとしてパースし、textToSummarizeを取得
-    const { textToSummarize } = await request.json();
+    const { pdfUrl, paperTitle } = await request.json();
 
-    // textToSummarize が存在し、かつ文字列であることを確認
-    if (!textToSummarize || typeof textToSummarize !== 'string') {
-      console.warn('Invalid request to /api/summarize: textToSummarize is missing or not a string.');
-      return NextResponse.json({ error: '要約するテキストが必要です。' }, { status: 400 }); // Bad Request
+    if (!pdfUrl || typeof pdfUrl !== 'string') {
+      console.warn('summarize API: Invalid request - pdfUrl is missing or not a string.');
+      return NextResponse.json({ error: '要約する論文のPDF URLが必要です。' }, { status: 400 });
     }
+    const safePaperTitle = typeof paperTitle === 'string' ? paperTitle : '提示された論文';
 
-    // デバッグ用に受け取ったテキストの冒頭を表示 (長すぎる場合は切り詰める)
-    console.log(`Received text to summarize (first 100 chars): ${textToSummarize.substring(0, 100)}...`);
+    console.log(`summarize API: Received request to summarize PDF: ${pdfUrl} (Title: ${safePaperTitle})`);
 
-    // Geminiモデルを選択 (利用可能なモデル名を確認してください)
-    const modelName = "gemini-2.0-flash"; // 例: 'gemini-1.5-flash' や 'gemini-pro' など
+    const modelName = "gemini-2.0-flash-latest";
 
-    // Gemini APIを呼び出して要約を生成
-    const response = await ai.models.generateContent({
+    const tempDir = os.tmpdir();
+    const uniqueFileName = `summary_paper_${Date.now()}_${path.basename(new URL(pdfUrl).pathname) || 'downloaded.pdf'}`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    const tempFilePath = path.join(tempDir, uniqueFileName);
+    
+    let uploadedFileResponse; 
+
+    try {
+      console.log(`summarize API: Downloading PDF to temporary path: ${tempFilePath}`);
+      await downloadFile(pdfUrl, tempFilePath);
+
+      console.log(`summarize API: Uploading file "${tempFilePath}" to Gemini.`);
+      uploadedFileResponse = await ai.files.upload({
+        file: tempFilePath,
+        config: { // ★★★ 修正点 ★★★
+          mimeType: "application/pdf",
+        },
+        // displayName: safePaperTitle // オプション
+      });
+      console.log(`summarize API: File uploaded to Gemini. Name: ${uploadedFileResponse.name}, URI: ${uploadedFileResponse.uri}`);
+
+      const contents = [
+        { 
+          fileData: {
+            mimeType: uploadedFileResponse.mimeType,
+            fileUri: uploadedFileResponse.uri,
+          }
+        },
+        { 
+          text: `あなたは学術論文を分析し、その内容を簡潔かつ正確に要約する専門家です。以下の論文「${safePaperTitle}」について、その主要な目的、採用された手法、得られた主要な結果、そして研究の最も重要な貢献や新規性が明確にわかるように、日本語で包括的な要約を作成してください。専門用語は適度に解説を加え、専門外の研究者や学生にも理解しやすい言葉遣いを心がけてください。要約の長さは、論文の複雑さに応じて調整し、重要な情報が欠落しない範囲で、できるだけ簡潔にまとめてください。`
+        }
+      ];
+
+      console.log(`summarize API: Generating summary with model ${modelName}.`);
+      const generationResponse = await ai.models.generateContent({
         model: modelName,
-        // プロンプト: どのような要約を期待するか具体的に指示
-        contents: `以下の英語の論文Abstractを日本語で、その研究の主要な目的、手法、結果が簡潔にわかるように要約してください:\n\n---\n${textToSummarize}\n---`,
-        // 必要に応じて生成設定 (generationConfig) を追加
-        // config: {
-        //   temperature: 0.5, // 低めに設定して、より決定的な出力を得る
-        //   maxOutputTokens: 250, // 要約の最大長を制限
-        //   // safetySettings: [...] // 安全性設定
-        // }
-    });
+        contents: contents,
+        config: {
+          temperature: 0.4,
+        }
+      });
+      console.log(`summarize API: Summary generation completed.`);
 
-    // APIからのレスポンスから要約テキストを取得 (新しいSDKでは .text でアクセス)
-    const summary = response.text;
+      const summary = generationResponse.text;
 
-    // 要約が生成されなかった場合のチェック
-    if (!summary) {
-        console.error('Gemini API call succeeded but returned no summary text.', response); // レスポンス詳細をログに記録
+      if (!summary) {
+        console.error('summarize API: Gemini API returned no summary text.', generationResponse);
         return NextResponse.json({ error: '要約の生成に失敗しました。APIからの応答が空でした。' }, { status: 500 });
+      }
+
+      console.log(`summarize API: Summary generated (first 100 chars): ${summary.substring(0, 100)}...`);
+      return NextResponse.json({ summary });
+
+    } finally {
+      if (uploadedFileResponse && uploadedFileResponse.name) {
+        try {
+          console.log(`summarize API: Deleting uploaded file from Gemini: ${uploadedFileResponse.name}`);
+          await ai.files.delete({ name: uploadedFileResponse.name }); 
+          console.log(`summarize API: Gemini file ${uploadedFileResponse.name} deleted successfully.`);
+        } catch (deleteError) {
+          console.error(`summarize API: Error deleting Gemini file ${uploadedFileResponse.name}:`, deleteError);
+        }
+      }
+      try {
+        console.log(`summarize API: Attempting to delete temporary local file: ${tempFilePath}`);
+        await fs.access(tempFilePath);
+        await fs.unlink(tempFilePath);
+        console.log(`summarize API: Temporary local file ${tempFilePath} deleted successfully.`);
+      } catch (unlinkError) {
+        if (unlinkError && typeof unlinkError === 'object' && 'code' in unlinkError) {
+          const nodeError = unlinkError as NodeJS.ErrnoException;
+          if (nodeError.code !== 'ENOENT') {
+            console.error(`summarize API: Error deleting temporary local file ${tempFilePath}:`, nodeError);
+          } else {
+            console.log(`summarize API: Temporary local file ${tempFilePath} not found for deletion (ENOENT).`);
+          }
+        } else {
+          console.error(`summarize API: An unexpected error type occurred while deleting temporary local file ${tempFilePath}:`, unlinkError);
+        }
+      }
     }
-
-    // 生成された要約の冒頭をデバッグ用に表示
-    console.log(`Generated summary (first 100 chars): ${summary.substring(0, 100)}...`);
-
-    // 成功レスポンスとして要約をJSON形式で返す
-    return NextResponse.json({ summary });
-
   } catch (error) {
-    // エラーハンドリング
-    console.error('Error occurred in /api/summarize:', error);
-    const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました。';
-    // サーバー内部のエラーとして500エラーを返す
+    console.error('summarize API: Unhandled error occurred:', error);
+    const errorMessage = error instanceof Error ? error.message : '不明なサーバーエラーが発生しました。';
     return NextResponse.json({ error: `要約生成中にサーバーエラーが発生しました: ${errorMessage}` }, { status: 500 });
   }
 }

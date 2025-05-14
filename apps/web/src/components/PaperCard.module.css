@@ -1,0 +1,211 @@
+/* apps/web/src/components/PaperCard.module.css */
+
+/* 既存の page.module.css からカード関連のスタイルをここに移動・コピー */
+/* .card, .cardTitle, .cardAuthors, .cardDates, .aiSummarySection, etc. */
+
+.card {
+  position: absolute; /* ホームページでのスタック表示のため */
+  background-color: #FFFFFF;
+  border-radius: 0.75rem;
+  box-shadow: 0px 10px 30px rgba(42, 63, 84, 0.2), 0px 5px 10px rgba(42, 63, 84, 0.15);
+  padding: 1rem;
+  width: 90vw;
+  max-width: 100%;
+  text-align: left;
+  border: 1px solid rgba(42, 63, 84, 0.1);
+  display: flex;
+  flex-direction: column;
+  transition-property: transform, background-color, opacity;
+  transition-duration: 0.3s;
+  transition-timing-function: ease-out;
+  max-height: 80vh;
+  /* cursor: grab; スワイプ時のみ有効にする場合は .activeGrab で */
+}
+
+/* ライブラリページなど、スタック表示でない場合のスタイル調整用 */
+.card.static { /* 例: ライブラリ一覧で使う場合 */
+  position: relative;
+  width: 100%;
+  margin-bottom: 1rem; /* カード間のマージン */
+  cursor: pointer; /* 詳細表示がある場合はポインターに */
+}
+.card.static:hover {
+  box-shadow: 0px 12px 35px rgba(42, 63, 84, 0.25), 0px 7px 12px rgba(42, 63, 84, 0.2);
+  transform: translateY(-2px);
+}
+
+
+.card.isSwiping { transition-duration: 0s !important; }
+.activeGrab { cursor: grabbing; }
+
+.swipeFeedbackOverlay { position: absolute; inset: 0; border-radius: inherit; opacity: 0.3; z-index: 0; pointer-events: none; }
+/* .feedbackPink, .feedbackLime は page.module.css に残しても良いし、こちらに持ってきても良い */
+/* .feedbackPink { background-color: #EC4899; } */
+/* .feedbackLime { background-color: #84CC16; } */
+
+
+.cardScrollableContent {
+  position: relative;
+  z-index: 10;
+  flex-grow: 1;
+  overflow-y: auto;
+  /* touch-action: pan-y;  PaperCard.tsx側で制御 */
+}
+
+.cardTitle {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #2A3F54;
+  position: sticky; /* スクロールしてもタイトルが見えるように */
+  top: -1rem; /* paddingを考慮して調整 */
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  padding-top: 1rem; /* スティッキー時のスペース確保 */
+  padding-bottom: 0.375rem;
+  margin-top: -1rem; /* padding相殺 */
+  z-index: 20;
+}
+@media (min-width: 640px) { .cardTitle { font-size: 1.125rem; line-height: 1.75rem; } }
+/* ... (既存の page.module.css から他のスタイルをコピー) ... */
+
+.cardAuthors { font-size: 0.75rem; line-height: 1rem; color: rgba(42, 63, 84, 0.7); margin-bottom: 0.5rem; font-style: italic; }
+.cardDates { font-size: 0.625rem; line-height: 0.75rem; color: rgba(42, 63, 84, 0.5); margin-bottom: 0.75rem; }
+.cardDates span + span::before { content: '/'; margin-left: 0.375rem; margin-right: 0.375rem; }
+.aiSummarySection { margin-bottom: 0.75rem; padding: 0.75rem; background-color: rgba(42, 63, 84, 0.05); border-radius: 0.5rem; border: 1px solid rgba(42, 63, 84, 0.1); }
+.aiSummaryHeader { font-weight: 600; font-size: 0.875rem; line-height: 1.25rem; color: #2A3F54; margin-bottom: 0.375rem; display: flex; align-items: center; justify-content: space-between; }
+.aiSummaryHeaderText { display: flex; align-items: center; }
+.aiSummaryHeaderText svg { height: 1rem; width: 1rem; margin-right: 0.25rem; color: #EC4899; }
+.generateButton { background-color: #EC4899; color: white; font-size: 0.625rem; line-height: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 9999px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: background-color 0.2s; border: none; cursor: pointer; }
+.generateButton:hover { background-color: rgba(236, 72, 153, 0.8); }
+.aiSummaryText, .aiSummaryPlaceholder, .aiSummaryLoading { font-size: 0.75rem; color: #2A3F54; line-height: 1.6; }
+.aiSummaryPlaceholder { color: rgba(42, 63, 84, 0.5); font-style: italic; }
+.aiSummaryLoading { color: rgba(42, 63, 84, 0.7); font-style: italic; animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.abstractSection { margin-bottom: 0.75rem; }
+.abstractSummary { cursor: pointer; font-size: 0.75rem; line-height: 1rem; font-weight: 500; color: rgba(42, 63, 84, 0.8); list-style: none; display: flex; align-items: center; transition: color 0.2s; }
+.abstractSummary:hover { color: #2A3F54; }
+.abstractSummary svg { height: 0.875rem; width: 0.875rem; margin-right: 0.25rem; transition: transform 0.2s; }
+.abstractSection[open] .abstractSummary svg { transform: rotate(90deg); }
+.abstractContent { color: rgba(42, 63, 84, 0.9); margin-top: 0.375rem; font-size: 0.75rem; background-color: rgba(42, 63, 84, 0.05); padding: 0.625rem; border-radius: 0.375rem; border: 1px solid rgba(42, 63, 84, 0.1); line-height: 1.6; }
+.categoriesContainer { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 1rem; }
+.categoryTag { background-color: rgba(42, 63, 84, 0.1); color: rgba(42, 63, 84, 0.8); font-size: 0.625rem; line-height: 0.75rem; font-weight: 500; padding: 0.125rem 0.5rem; border-radius: 9999px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+
+.pdfButtonArea {
+  position: sticky; /* スクロールしてもボタンエリアが見えるように */
+  bottom: -1rem; /* paddingを考慮 */
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(4px);
+  padding-top: 0.625rem;
+  padding-bottom: 1rem; /* paddingを考慮 */
+  margin-bottom: -1rem; /* padding相殺 */
+  margin-left: -1rem; /* padding相殺 */
+  margin-right: -1rem; /* padding相殺 */
+  z-index: 20;
+  border-top: 1px solid rgba(42, 63, 84, 0.1);
+}
+
+.actionButtonsContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem; /* ボタン間のスペース */
+  padding-left: 1rem; /* ボタンエリア自体の左右パディング */
+  padding-right: 1rem;
+}
+.pdfButtonWrapper { flex-grow: 0; /* PDFボタンが中央に来やすいように */ }
+
+@media (min-width: 480px) { /* 少し広くなったら左右に分散 */
+  .actionButtonsContainer {
+    justify-content: space-between;
+  }
+}
+
+
+.pcActionButton {
+  display: inline-flex; /* モバイルでも表示するように変更 */
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.75rem; /* 少し小さめ */
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.1s ease-out;
+  min-width: auto; /* 最小幅を自動に */
+  gap: 0.25rem;
+  background-color: transparent;
+}
+.pcActionButtonIcon { height: 1.125rem; width: 1.125rem; } /* 少し小さめ */
+.pcActionButtonText { display: inline; } /* テキストは常に表示 */
+
+.pcDislikeButton { border-color: #84CC16; color: #84CC16; }
+.pcDislikeButton:hover { background-color: rgba(132, 204, 22, 0.1); transform: scale(1.03); }
+
+.pcLikeButton { border-color: #EC4899; color: #EC4899; }
+.pcLikeButton:hover { background-color: rgba(236, 72, 153, 0.1); transform: scale(1.03); }
+.pcLikeButton.liked { background-color: #EC4899; color: white; } /* いいね済みのスタイル */
+.pcLikeButton.liked:hover { background-color: #d03d83; }
+
+
+.pdfButton {
+  display: inline-flex;
+  align-items: center;
+  background-color: #2A3F54;
+  color: white;
+  font-size: 0.75rem; /* 少し小さめ */
+  line-height: 1rem;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  box-shadow: 0px 5px 15px rgba(42, 63, 84, 0.15), 0px 2px 5px rgba(42, 63, 84, 0.1);
+  transition: background-color 0.2s, transform 0.2s;
+  border: none;
+  cursor: pointer;
+}
+.pdfButton:hover { background-color: rgba(42, 63, 84, 0.8); transform: scale(1.05); }
+.pdfButton svg { height: 0.875rem; width: 0.875rem; margin-right: 0.25rem; }
+.pdfPlaceholder { height: 1.875rem; /* PDFボタンの高さに合わせる */ }
+
+
+/* ライブラリ削除ボタン用のスタイル */
+.pcRemoveButton {
+  border-color: #ef4444; /* 赤系の色 */
+  color: #ef4444;
+}
+.pcRemoveButton:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  transform: scale(1.03);
+}
+
+/* エンドオブフィードカード用のスタイル (page.module.css から持ってくるか、ここで定義) */
+.endOfFeedCard {
+  border-style: dashed;
+  border-color: rgba(42, 63, 84, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: default; /* スワイプはするが、クリックアクションは通常ない */
+}
+.endOfFeedContent { padding: 1.5rem; }
+.endOfFeedTitle {
+  position: static;
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+.endOfFeedMessage { font-size: 0.875rem; color: rgba(42, 63, 84, 0.8); margin-bottom: 1.5rem; }
+
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+/* スワイプアニメーション用のキーフレームは page.module.css に残した方が良いかもしれません (汎用性のため) */
+/* @keyframes flyOutLeft { ... } */
+/* .animateFlyOutLeft { ... } */
+/* @keyframes flyOutRight { ... } */
+/* .animateFlyOutRight { ... } */
+/* @keyframes nextCardEnter { ... } */
+/* .animateNextCardEnter { ... } */
