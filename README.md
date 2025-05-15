@@ -1,8 +1,8 @@
-# KigaErs: 論文スワイプアプリ
+# KigaIrs: 論文スワイプアプリ
 
 **論文との新しい出会いを、もっと直感的に。**
 
-**すぐに試す → [https://kiga-ers-web.vercel.app/](https://kiga-ers-web.vercel.app/)**
+**すぐに試す → [https://kiga-ers-web.vercel.app/](https://kiga-irs-web.vercel.app/)**
 
 Kiga-ers（キガース）は、[arXiv](https://arxiv.org/) の論文をスワイプ操作で閲覧できるWebアプリケーションです。忙しい研究者や学生、新しい知識に触れたいすべての人へ、効率的かつ楽しく論文を発見する体験を提供します。
 
@@ -61,8 +61,8 @@ Kiga-ersは以下の技術を使用して構築されています。
 
 1.  **リポジトリをクローン**:
     ```bash
-    git clone https://github.com/nishipippi/Kiga-ers.git
-    cd Kiga-ers
+    git clone https://github.com/nishipippi/KigaIrs.git
+    cd KigaIrs
     ```
 
 2.  **依存関係をインストール**:
