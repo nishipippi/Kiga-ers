@@ -2,7 +2,7 @@
 
 **論文との新しい出会いを、もっと直感的に。**
 
-**すぐに試す → [https://kiga-irs-web.vercel.app/](https://kiga-irs-web.vercel.app/)**
+**すぐに試す → [https://kiga-ers-web.vercel.app/](https://kiga-ers-web.vercel.app/)**
 
 Kiga-ers（キガース）は、[arXiv](https://arxiv.org/) の論文をスワイプ操作で閲覧できるWebアプリケーションです。忙しい研究者や学生、新しい知識に触れたいすべての人へ、効率的かつ楽しく論文を発見する体験を提供します。
 
