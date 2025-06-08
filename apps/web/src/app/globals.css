@@ -40,8 +40,15 @@ a {
   justify-content: space-between; /* ヘッダーとメインコンテンツを配置 */
   min-height: 100vh;
   padding: 1rem; /* モバイル用ベースパディング */
-  overflow: hidden;
+  overflow: hidden; /* overflow: hidden; はそのまま */
   user-select: none; /* select-none */
+}
+
+/* メインコンテンツのラッパー */
+.main-content-wrapper {
+  width: 100%;
+  flex-grow: 1; /* 残りのスペースを埋める */
+  padding-bottom: 80px; /* 固定フッターの高さ + α */
 }
 
 @media (min-width: 640px) { /* sm */
