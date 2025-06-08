@@ -23,11 +23,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja">
-      <head />
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body suppressHydrationWarning={true}>
         <LikedPapersProvider>
-          <div className="app-container"> {/*  Ensure this div doesn't introduce extra direct text children */}
+          <div className="app-container">
             <main className="main-content-wrapper">
               {children}
             </main>

@@ -5,10 +5,10 @@
   background-color: #ffffff; /* 背景色 (プロジェクトのテーマに合わせて調整) */
   border-top: 1px solid #e5e7eb; /* 上境界線 (プロジェクトのテーマに合わせて調整) */
   padding: 0.75rem 0; /* 上下パディング */
-  position: sticky; /* 画面下部に固定する場合 */
+  position: fixed; /* 画面下部に固定 */
   bottom: 0;
   left: 0;
-  z-index: 50; /* 他の要素より手前に表示 */
+  z-index: 1000; /* 他の要素より手前に表示 (より高い値に) */
   box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05); /* ちょっとした影 */
 }
 

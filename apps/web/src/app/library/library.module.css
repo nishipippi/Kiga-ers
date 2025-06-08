@@ -25,27 +25,11 @@
   color: #4b5563;
 }
 
-.loadingContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  text-align: center;
-  color: #666;
-}
-.spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border-left-color: #2A3F54;
-  animation: spinLibrary 1s ease infinite;
-  margin-bottom: 1rem;
-}
-@keyframes spinLibrary {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.papersGrid {
+  display: grid;
+  grid-template-columns: 1fr; /* 列を1つに固定 */
+  gap: 1.5rem; /* カード間の隙間 */
+  justify-items: center; /* 各カードを水平方向に中央揃え */
 }
 
 .paperList {
@@ -188,16 +172,8 @@
   height: 1.25rem;
 }
 
-.emptyLibraryContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 3rem 1rem;
-  min-height: 60vh;
-  color: #6b7280;
+.emptyText {
+  font-size: 1rem; /* text-base */
+  line-height: 1.6;
+  max-width: 400px;
 }
-.emptyIcon { width: 4rem; height: 4rem; margin-bottom: 1.5rem; color: #9ca3af; }
-.emptyTitle { font-size: 1.5rem; font-weight: 600; color: #374151; margin-bottom: 0.75rem; }
-.emptyText { font-size: 1rem; line-height: 1.6; max-width: 400px; }

@@ -2,16 +2,22 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLikedPapers } from '@/contexts/LikedPapersContext';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import FormattedTextRenderer from '@/components/FormattedTextRenderer';
+import PaperCard from '@/components/PaperCard';
 import styles from './library.module.css';
-import { BookmarkSlashIcon, TrashIcon, SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import paperCardStyles from '@/components/PaperCard.module.css'; // PaperCardのスタイルをインポート
+import { BookmarkSlashIcon } from '@heroicons/react/24/outline'; // ライブラリが空の場合のアイコン例
 
 export default function LibraryPage() {
   // ★★★ 修正点: isPaperLiked を削除 ★★★
   const { likedPapers, removeLikedPaper, updateLikedPaperSummary, isLoadingPersistence } = useLikedPapers();
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleRemoveFromLibrary = (paperId: string, paperTitle: string) => {
     if (confirm(`「${paperTitle}」をライブラリから削除しますか？`)) {
@@ -19,6 +25,7 @@ export default function LibraryPage() {
     }
   };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleGenerateSummary = useCallback(async (paperId: string, pdfUrl: string, paperTitle: string) => {
     if (isSummarizing === paperId || !pdfUrl) return;
 
@@ -43,6 +50,9 @@ export default function LibraryPage() {
     }
   }, [isSummarizing, updateLikedPaperSummary]);
 
+  const handleViewDetails = (paperId: string) => {
+    router.push(`/library/${paperId}`);
+  };
 
   if (isLoadingPersistence) {
     return (
@@ -75,44 +85,17 @@ export default function LibraryPage() {
       </header>
       <ul className={styles.paperList}>
         {likedPapers.map((paper) => (
-          <li key={paper.id} className={styles.paperListItem}>
-            <div className={styles.paperInfo}>
-              <Link href={`/library/${paper.id}`} className={styles.paperTitleLink}>
-                <span className={styles.paperTitleText}>{paper.title}</span>
-              </Link>
-              {paper.aiSummary ? (
-                <p className={styles.aiSummaryText}>
-                  <FormattedTextRenderer text={paper.aiSummary} />
-                </p>
-              ) : (
-                <div className={styles.summaryActions}>
-                  {isSummarizing === paper.id ? (
-                    <div className={styles.summarizingIndicator}>
-                      <ArrowPathIcon className={styles.summarizingIcon} />
-                      <span>要約を生成中...</span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleGenerateSummary(paper.id, paper.pdfLink, paper.title)}
-                      className={styles.generateSummaryButton}
-                      disabled={!paper.pdfLink}
-                    >
-                      <SparklesIcon className={styles.generateSummaryIcon} />
-                      AI要約を生成
-                    </button>
-                  )}
-                   {!paper.pdfLink && <small className={styles.noPdfLinkWarning}> (PDFリンクが無いため要約できません)</small>}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => handleRemoveFromLibrary(paper.id, paper.title)}
-              className={styles.removeButton}
-              aria-label={`「${paper.title}」をライブラリから削除`}
-            >
-              <TrashIcon className={styles.removeButtonIcon} />
-            </button>
-          </li>
+          <PaperCard
+            key={paper.id}
+            paper={paper}
+            // isSummarizing={false} // ライブラリページでは要約生成中の状態は通常不要
+            // onGenerateAiSummary={undefined} // ライブラリページでは要約生成は行わない想定
+            onRemoveFromLibrary={(paperId) => handleRemoveFromLibrary(paperId, paper.title)} // ライブラリから削除する関数を渡す
+            showSwipeButtons={false} // ライブラリページではスワイプボタンは不要
+            isLiked={likedPapers.some(p => p.id === paper.id)} // いいね状態を表示
+            onViewDetails={handleViewDetails} // 詳細ページへの遷移関数を渡す
+            className={`${paperCardStyles.card} ${paperCardStyles.static} ${styles.libraryCard}`} // 3つのクラスを結合
+          />
         ))}
       </ul>
     </div>

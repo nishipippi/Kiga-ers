@@ -58,10 +58,7 @@ export async function POST(request: Request) {
       console.log(`summarize API: Uploading file "${tempFilePath}" to Gemini.`);
       uploadedFileResponse = await ai.files.upload({
         file: tempFilePath,
-        config: { // ★★★ 修正点 ★★★
-          mimeType: "application/pdf",
-        },
-        // displayName: safePaperTitle // オプション
+        config: { mimeType: 'application/pdf' },
       });
       console.log(`summarize API: File uploaded to Gemini. Name: ${uploadedFileResponse.name}, URI: ${uploadedFileResponse.uri}`);
 
