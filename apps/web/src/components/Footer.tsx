@@ -2,12 +2,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation'; // 現在のパスを取得するために使用
+import { usePathname } from 'next/navigation';
 import styles from './Footer.module.css';
-import { HomeIcon, BookmarkIcon } from '@heroicons/react/24/solid'; // Solidアイコンを使用 (アクティブ状態が分かりやすいため)
+import { HomeIcon, BookmarkIcon } from '@heroicons/react/24/solid';
 
 export default function Footer() {
-  const pathname = usePathname(); // 現在のパスを取得
+  const pathname = usePathname();
 
   return (
     <footer className={styles.footer}>

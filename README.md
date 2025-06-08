@@ -1,4 +1,4 @@
-# KigaErs: 論文スワイプアプリ
+# KigaIrs: 論文スワイプアプリ
 
 **論文との新しい出会いを、もっと直感的に。**
 
@@ -61,8 +61,8 @@ Kiga-ersは以下の技術を使用して構築されています。
 
 1.  **リポジトリをクローン**:
     ```bash
-    git clone https://github.com/nishipippi/Kiga-ers.git
-    cd Kiga-ers
+    git clone https://github.com/nishipippi/KigaIrs.git
+    cd KigaIrs
     ```
 
 2.  **依存関係をインストール**:

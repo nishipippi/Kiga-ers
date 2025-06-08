@@ -3,32 +3,28 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 
-// Paper型をインポート (実際のパスに合わせてください)
-// 例: import type { Paper } from '@/app/page';
-// もしPaper型がpage.tsx内で定義されている場合、それをエクスポートするか、
-// 共通の型定義ファイルに移動する必要があります。
-// ここでは仮の型定義を置いておきます。実際のプロジェクトに合わせてください。
 export interface Paper {
   id: string;
   title: string;
-  summary: string;
+  summary: string; // 元のAbstract
   authors: string[];
   published: string;
   updated: string;
   pdfLink: string;
   categories: string[];
-  aiSummary?: string;
-  isEndOfFeedCard?: boolean; // ライブラリでは通常不要だが、元の型に合わせる
-  endOfFeedMessage?: string; // 同上
+  aiSummary?: string; // AIによる日本語要約
+  isEndOfFeedCard?: boolean;
+  endOfFeedMessage?: string;
 }
-
 
 interface LikedPapersContextType {
   likedPapers: Paper[];
   addLikedPaper: (paper: Paper) => void;
   removeLikedPaper: (paperId: string) => void;
   isPaperLiked: (paperId: string) => boolean;
-  clearLikedPapers: () => void; // オプション: ライブラリ全削除機能
+  updateLikedPaperSummary: (paperId: string, aiSummary: string) => void; // ★★★ 追加 ★★★
+  clearLikedPapers: () => void;
+  isLoadingPersistence: boolean;
 }
 
 const LikedPapersContext = createContext<LikedPapersContextType | undefined>(undefined);
@@ -36,42 +32,49 @@ const LikedPapersContext = createContext<LikedPapersContextType | undefined>(und
 const LOCAL_STORAGE_KEY = 'kigaers_likedPapers';
 
 export const LikedPapersProvider = ({ children }: { children: ReactNode }) => {
-  const [likedPapers, setLikedPapers] = useState<Paper[]>(() => {
-    // クライアントサイドでのみ localStorage から読み込む
+  const [likedPapers, setLikedPapers] = useState<Paper[]>([]);
+  const [isLoadingPersistence, setIsLoadingPersistence] = useState(true);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         const savedPapers = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (savedPapers) {
           const parsedPapers = JSON.parse(savedPapers);
-          // 簡単な型チェック (より厳密なチェックも可能)
-          if (Array.isArray(parsedPapers) && parsedPapers.every(p => typeof p.id === 'string')) {
-            return parsedPapers;
+          if (Array.isArray(parsedPapers) && parsedPapers.every(p => typeof p.id === 'string' && typeof p.title === 'string')) {
+            setLikedPapers(parsedPapers);
+          } else {
+            console.warn("LikedPapersContext: Data in localStorage is not in expected format.");
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
           }
         }
       } catch (error) {
-        console.error("Failed to load liked papers from localStorage:", error);
+        console.error("LikedPapersContext: Failed to load liked papers from localStorage:", error);
+        localStorage.removeItem(LOCAL_STORAGE_KEY);
+      } finally {
+        setIsLoadingPersistence(false);
       }
+    } else {
+        setIsLoadingPersistence(false);
     }
-    return [];
-  });
+  }, []);
 
-  // likedPapers が変更されたら localStorage に保存 (クライアントサイドでのみ)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !isLoadingPersistence) {
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(likedPapers));
       } catch (error) {
-        console.error("Failed to save liked papers to localStorage:", error);
+        console.error("LikedPapersContext: Failed to save liked papers to localStorage:", error);
       }
     }
-  }, [likedPapers]);
+  }, [likedPapers, isLoadingPersistence]);
 
   const addLikedPaper = useCallback((paper: Paper) => {
     setLikedPapers((prevPapers) => {
       if (!prevPapers.find(p => p.id === paper.id)) {
         return [...prevPapers, paper];
       }
-      return prevPapers; // 既に存在する場合は変更しない
+      return prevPapers;
     });
   }, []);
 
@@ -80,15 +83,25 @@ export const LikedPapersProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const isPaperLiked = useCallback((paperId: string) => {
+    if (isLoadingPersistence) return false;
     return likedPapers.some(p => p.id === paperId);
-  }, [likedPapers]);
+  }, [likedPapers, isLoadingPersistence]);
+
+  // ★★★ 追加: 特定の論文のAI要約を更新する関数 ★★★
+  const updateLikedPaperSummary = useCallback((paperId: string, aiSummary: string) => {
+    setLikedPapers((prevPapers) =>
+      prevPapers.map((p) =>
+        p.id === paperId ? { ...p, aiSummary: aiSummary } : p
+      )
+    );
+  }, []);
 
   const clearLikedPapers = useCallback(() => {
     setLikedPapers([]);
   }, []);
 
   return (
-    <LikedPapersContext.Provider value={{ likedPapers, addLikedPaper, removeLikedPaper, isPaperLiked, clearLikedPapers }}>
+    <LikedPapersContext.Provider value={{ likedPapers, addLikedPaper, removeLikedPaper, isPaperLiked, updateLikedPaperSummary, clearLikedPapers, isLoadingPersistence }}>
       {children}
     </LikedPapersContext.Provider>
   );
