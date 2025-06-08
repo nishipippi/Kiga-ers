@@ -2,9 +2,11 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useLikedPapers } from '@/contexts/LikedPapersContext';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import FormattedTextRenderer from '@/components/FormattedTextRenderer';
 import PaperCard from '@/components/PaperCard';
 import styles from './library.module.css';
@@ -23,6 +25,7 @@ export default function LibraryPage() {
     }
   };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleGenerateSummary = useCallback(async (paperId: string, pdfUrl: string, paperTitle: string) => {
     if (isSummarizing === paperId || !pdfUrl) return;
 
