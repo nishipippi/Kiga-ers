@@ -27,9 +27,9 @@
 
 .papersGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* レスポンシブなグリッド */
+  grid-template-columns: 1fr; /* 列を1つに固定 */
   gap: 1.5rem; /* カード間の隙間 */
-  place-items: center; /* グリッドアイテムをセル内で中央揃え */
+  justify-items: center; /* 各カードを水平方向に中央揃え */
 }
 
 .libraryCard {

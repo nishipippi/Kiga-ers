@@ -20,7 +20,7 @@ export default function HomePage() {
   const [currentPaperIndex, setCurrentPaperIndex] = useState(0);
   const { likedPapers, addLikedPaper, isPaperLiked } = useLikedPapers();
   const [message, setMessage] = useState<string | null>('Kiga-ers へようこそ！論文を探しています...');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentSearchTerm, setCurrentSearchTerm] = useState('');

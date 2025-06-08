@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'; // 詳細ページへの遷移に�
 import { useLikedPapers } from '@/contexts/LikedPapersContext';
 import PaperCard from '@/components/PaperCard';
 import styles from './library.module.css';
+import paperCardStyles from '@/components/PaperCard.module.css'; // PaperCardのスタイルをインポート
 import { BookmarkSlashIcon } from '@heroicons/react/24/outline'; // ライブラリが空の場合のアイコン例
 
 export default function LibraryPage() {
@@ -52,7 +53,7 @@ export default function LibraryPage() {
             showSwipeButtons={false} // ライブラリページではスワイプボタンは不要
             isLiked={isPaperLiked(paper.id)} // いいね状態を表示
             onViewDetails={handleViewDetails} // 詳細ページへの遷移関数を渡す
-            className={styles.libraryCard} // ライブラリ用の追加スタイル
+            className={`${paperCardStyles.card} ${paperCardStyles.static} ${styles.libraryCard}`} // 3つのクラスを結合
           />
         ))}
       </div>
