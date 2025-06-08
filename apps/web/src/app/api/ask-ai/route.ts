@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
     console.log(`ask-ai API: Received question "${question}" for PDF: ${pdfUrl} (Title: ${safePaperTitle})`);
 
-    const modelName = "gemini-1.5-flash-latest";
+    const modelName = "gemini-2.0-flash";
 
     const tempDir = os.tmpdir();
     const uniqueFileName = `ask_paper_${Date.now()}_${path.basename(new URL(pdfUrl).pathname) || 'downloaded.pdf'}`.replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -62,6 +62,7 @@ export async function POST(request: Request) {
       console.log(`ask-ai API: Uploading file "${tempFilePath}" to Gemini.`);
       uploadedFileResponse = await ai.files.upload({
         file: tempFilePath,
+        config: { mimeType: 'application/pdf' },
       });
       console.log(`ask-ai API: File uploaded to Gemini. Name: ${uploadedFileResponse.name}, URI: ${uploadedFileResponse.uri}`);
 
