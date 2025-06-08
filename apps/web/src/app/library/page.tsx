@@ -3,8 +3,10 @@
 
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLikedPapers } from '@/contexts/LikedPapersContext';
 import FormattedTextRenderer from '@/components/FormattedTextRenderer';
+import PaperCard from '@/components/PaperCard';
 import styles from './library.module.css';
 import paperCardStyles from '@/components/PaperCard.module.css'; // PaperCardのスタイルをインポート
 import { BookmarkSlashIcon } from '@heroicons/react/24/outline'; // ライブラリが空の場合のアイコン例
@@ -13,6 +15,7 @@ export default function LibraryPage() {
   // ★★★ 修正点: isPaperLiked を削除 ★★★
   const { likedPapers, removeLikedPaper, updateLikedPaperSummary, isLoadingPersistence } = useLikedPapers();
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleRemoveFromLibrary = (paperId: string, paperTitle: string) => {
     if (confirm(`「${paperTitle}」をライブラリから削除しますか？`)) {
@@ -44,6 +47,9 @@ export default function LibraryPage() {
     }
   }, [isSummarizing, updateLikedPaperSummary]);
 
+  const handleViewDetails = (paperId: string) => {
+    router.push(`/library/${paperId}`);
+  };
 
   if (isLoadingPersistence) {
     return (
@@ -81,9 +87,9 @@ export default function LibraryPage() {
             paper={paper}
             // isSummarizing={false} // ライブラリページでは要約生成中の状態は通常不要
             // onGenerateAiSummary={undefined} // ライブラリページでは要約生成は行わない想定
-            onRemoveFromLibrary={handleRemoveFromLibrary} // ライブラリから削除する関数を渡す
+            onRemoveFromLibrary={(paperId) => handleRemoveFromLibrary(paperId, paper.title)} // ライブラリから削除する関数を渡す
             showSwipeButtons={false} // ライブラリページではスワイプボタンは不要
-            isLiked={isPaperLiked(paper.id)} // いいね状態を表示
+            isLiked={likedPapers.some(p => p.id === paper.id)} // いいね状態を表示
             onViewDetails={handleViewDetails} // 詳細ページへの遷移関数を渡す
             className={`${paperCardStyles.card} ${paperCardStyles.static} ${styles.libraryCard}`} // 3つのクラスを結合
           />
