@@ -12,17 +12,13 @@ export default function Footer() {
   return (
     <footer className={styles.footer}>
       <nav className={styles.nav}>
-        <Link href="/" legacyBehavior passHref>
-          <a className={`${styles.navLink} ${pathname === '/' ? styles.active : ''}`}>
-            <HomeIcon className={styles.icon} />
-            <span className={styles.navText}>ホーム</span>
-          </a>
+        <Link href="/" className={`${styles.navLink} ${pathname === '/' ? styles.active : ''}`}>
+          <HomeIcon className={styles.icon} />
+          <span className={styles.navText}>ホーム</span>
         </Link>
-        <Link href="/library" legacyBehavior passHref>
-          <a className={`${styles.navLink} ${pathname === '/library' || pathname?.startsWith('/library/') ? styles.active : ''}`}>
-            <BookmarkIcon className={styles.icon} />
-            <span className={styles.navText}>ライブラリ</span>
-          </a>
+        <Link href="/library" className={`${styles.navLink} ${pathname === '/library' || pathname?.startsWith('/library/') ? styles.active : ''}`}>
+          <BookmarkIcon className={styles.icon} />
+          <span className={styles.navText}>ライブラリ</span>
         </Link>
       </nav>
     </footer>

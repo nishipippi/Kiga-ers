@@ -24,11 +24,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`}> {/* htmlタグにクラスを適用 */}
-      <body> {/* bodyタグからフォントクラス指定を削除 (htmlタグで一括指定) */}
+    <html lang="ja" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body suppressHydrationWarning={true}>
         <LikedPapersProvider>
-          <div className="app-container"> {/* globals.css で定義したコンテナ */}
-            <main className="main-content-wrapper"> {/* メインコンテンツをラップ */}
+          <div className="app-container">
+            <main className="main-content-wrapper">
               {children}
             </main>
             <Footer />
